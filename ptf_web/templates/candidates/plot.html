@@ -77,24 +77,6 @@
                 success: dataReceived
             });
             
-            $.ajax({
-                type: "GET",
-                url: "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev",
-                dataType: "jsonp",
-                username : "PTF",
-                password : "palomar",
-                success: parsePTFImageQuery
-            });
-            /*$.ajax({
-                type: "GET",
-                url: "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={{light_curve.ra}},{{light_curve.dec}}&size=0.005&columns=pfilename&where=obsmjd={{'{:.5f}'.format(light_curve.data['mjd'][0])}}",
-                contentType: "text/plain; charset=utf-8",
-                dataType: "text",
-                username : "PTF",
-                password : "palomar",
-                success: parsePTFImageQuery
-            });*/
-            
             
             /*$('#radec').qtip({
                 content: "<a href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a> | <a href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a>",
