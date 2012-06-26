@@ -95,7 +95,7 @@ h1, h2 {
 ======================================================================== */
 span.message {
     text-align: center;
-    color: #64CBE8;
+    color: #5CBDCC;
     font-weight: bold;
 }
 
@@ -142,6 +142,48 @@ table#candidateList tr.odd {
 }
 table#candidateList tr.even {
     background: #eee;
+}
+
+tr.mouseover {
+    background: #91DEFF;
+}
+
+font.key {
+    color: #666;
+}
+
+font.val {
+    color: #74B7D4
+}
+
+#radec {
+    border: 2px solid #ccc;
+}
+
+#radec:hover {
+    border: 2px solid #666;
+    cursor: pointer;
+}
+
+table.info {
+    border-bottom: 1px solid #ccc;
+    font-size: 15pt;
+}
+
+table.info td {
+    text-align: center;
+}
+
+table.info a {
+    font-size: 12pt;
+}
+
+table.info tr.titles td {
+    border-right: 1px solid #666;
+}
+
+table.info tr.titles td.last {
+    border-right: 0px;
 }
 
 /* Images

@@ -5,6 +5,12 @@
         
     Packages installed into this virtual environment:
         pip install numpy scipy sqlalchemy flask flask-openid
+        
+    TODO:
+        - Create a function in candidates that accepts a Source ID and an MJD and returns
+            an image (for the plot.html page)
+        - Create new table in website.db for storing flags specified on the html form on plot.html
+        - Create the html form on plot.html, e.g. variable star, transient, galaxy, etc.
     
 """
 

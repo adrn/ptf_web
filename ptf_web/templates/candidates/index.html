@@ -1,5 +1,40 @@
 {% extends "layout.html" %}
 
+{% block head %}
+    {{ super() }}
+    
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("tr").click(function(){
+                window.location = $(this).attr("url");
+            });
+            
+            $("tr.even").hover(
+                function(){
+                    $(this).css({"background":"#80C3E0"});
+                    $(this).css({"cursor":"pointer"});
+                },
+                function(){
+                    $(this).css({"background":"#eee"});
+                    $(this).css({"cursor":"default"});
+                }
+            );
+            
+            $("tr.odd").hover(
+                function(){
+                    $(this).css({"background":"#90DCFC"});
+                    $(this).css({"cursor":"pointer"});
+                },
+                function(){
+                    $(this).css({"background":"#fff"});
+                    $(this).css({"cursor":"default"});
+                }
+            );
+            
+        });
+    </script>
+{% endblock %}
+
 {% block body %}
     
     {% if g.user %}
@@ -20,7 +55,7 @@
         <tbody>
             {% set row_class = cycler('odd', 'even') %}
             {% for candidate in candidates %}
-                <tr class="{{ row_class.next() }}">
+                <tr class="{{ row_class.next() }}" url="/candidates/plot?matchedSourceID={{ candidate['matchedSourceID'] }}">
                     <td>{{ candidate["matchedSourceID"] }}</td>
                     <td>{{ candidate["field_id"] }}</td>
                     <td>{{ candidate["ccd_id"] }}</td>

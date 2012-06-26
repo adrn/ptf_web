@@ -5,8 +5,10 @@ ptf_basedir = "/home/adrian/projects/ptf"
 LIGHT_CURVE_PATH = os.path.join(ptf_basedir, "data/candidates/light_curves/")
 
 DEBUG = False
+SERVER_NAME = "deimos.astro.columbia.edu:5000"
+SESSION_COOKIE_NAME = "deimos"
 
-SECRET_KEY = 'testkey'
+SECRET_KEY = '/3yXR~XHA0Zr98jLWX/,?RTH!jmN]'
 DATABASE_URI = "sqlite:///" + os.path.join(_basedir, "website.db")
 DATABASE_CONNECT_OPTIONS = {}
 

@@ -3,28 +3,114 @@
 {% block head %}
     {{ super() }}
     
-    <script src="{{ url_for('static', filename='js/jquery.flot.js') }}"></script>
-    <!--<script src="https://github.com/RuiPereira/flot/raw/errorbars/jquery.flot.errorbars.js"></script>-->
+    <script src="{{ url_for('static', filename='js/flot/jquery.flot.js') }}"></script>
+    <script language="javascript" type="text/javascript" src="{{ url_for('static', filename='js/flot/jquery.flot.selection.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery.flot.errorbars.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery.qtip-1.0.0-rc3.min.js') }}"></script>
     
-    <script type="text/javascript">        
-        $.ajax({
-            type: "GET",
-            url: "/candidates/data?matchedSourceID={{ light_curve.matchedSourceID }}",
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-            success: function (data) {
-                
+    <script type="text/javascript">
+        array_max = function( array ){
+            return Math.max.apply( Math, array );
+        };
+        
+        array_min = function( array ){
+            return Math.min.apply( Math, array );
+        };
+        
+        function dataReceived(data) {
+            var options = { yaxis : { transform: function (v) { return -v; },
+                                      inverseTransform: function (v) { return -v; },
+                                      min : array_min(data.light_curve.mag)-0.1,
+                                      max : array_max(data.light_curve.mag)+0.1 } ,
+                            xaxis : { min : array_min(data.light_curve.mjd)-0.2, 
+                                      max : array_max(data.light_curve.mjd)+0.2 }, 
+                            points : { show : true,
+                                       lineWidth : 0,
+                                       radius : 2 ,
+                                       fill : true,
+                                       fillColor : "rgba(0,0,0,0.4)",
+                                       errorbars : "y",
+                                       yerr : { show : true } },
+                            lines : { show : false },
+                            colors : ["black"]
+                           }
+                           //selection: { mode : "xy" }
+            
+            var plot_data = [];
+            for (ii in data.light_curve.mjd) {
+                plot_data[ii] = [data.light_curve.mjd[ii], data.light_curve.mag[ii], data.light_curve.error[ii]];
+                //console.log(plot_data[ii]);
             }
+            
+            $.plot($("#placeholder"), [plot_data], options);
+            /*
+            $("#placeholder").bind("plotselected", function (event, ranges) {
+                plot = $.plot($("#placeholder"), 
+                              plot_data,
+                              $.extend(true, {}, options, {
+                                       xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to },
+                                       yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to }
+                                       })
+                             );
+            });
+            
+            $("#reset").click(function () {
+                plot.clearSelection();
+                //plot.draw();
+                plot = $.plot(placeholder, 
+                    [ plot_data ], 
+                    options
+                );
+            });*/
+        }
+        
+        function parsePTFImageQuery(textData) {
+            alert(textData);   
+        }
+        
+        $(document).ready(function() {
+            $.ajax({
+                type: "GET",
+                url: "/candidates/data?matchedSourceID={{ light_curve.matchedSourceID }}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: dataReceived
+            });
+            
+            $.ajax({
+                type: "GET",
+                url: "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev",
+                dataType: "jsonp",
+                username : "PTF",
+                password : "palomar",
+                success: parsePTFImageQuery
+            });
+            /*$.ajax({
+                type: "GET",
+                url: "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={{light_curve.ra}},{{light_curve.dec}}&size=0.005&columns=pfilename&where=obsmjd={{'{:.5f}'.format(light_curve.data['mjd'][0])}}",
+                contentType: "text/plain; charset=utf-8",
+                dataType: "text",
+                username : "PTF",
+                password : "palomar",
+                success: parsePTFImageQuery
+            });*/
+            
+            
+            /*$('#radec').qtip({
+                content: "<a href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a> | <a href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a>",
+                position: {"corner" : {"target" : "topMiddle",
+                                       "tooltip" : "bottomMiddle"}
+                          },
+                style: { 
+                    name: 'blue' // Inherit from preset style
+                },
+                show : {"delay" : 0}
+            });*/
         });
-        
-        $.plot($("#placeholder"), [ [[0, 0], [1, 1]] ], { yaxis: { max: 1 } });
-        
     </script>
                
     
 {% endblock %}
-
-{% block title %}  {% endblock %}
 
 {% block body %}
     
@@ -33,10 +119,40 @@
     {% endif %}
     
     {% if light_curve != None %}
-        <h2>Source ID: {{light_curve.matchedSourceID}} </h2>
-        <hr width="100px" color="#ccc" size="1px" />
+        <table width="1400px" class="info">
+            <tr class="titles">
+                <td><font class="key">Source ID:</font> <font class="val">{{light_curve.matchedSourceID}}</font></td>
+                <td><font class="key">Num. Observations:</font> <font class="val">{{light_curve.num_obs}}</font></td>
+                <td><font class="key">Baseline:</font> <font class="val">{{"{:.2f}".format(light_curve.data["mjd"][-1]-light_curve.data["mjd"][0])}} days</font></td>
+                <td><font class="key">RA:</font> <font class="val">{{"{:.5f}".format(light_curve.ra)}}</font></td>
+                <td class="last"><font class="key">Dec:</font> <font class="val">{{"{:.5f}".format(light_curve.dec)}}</font></td>
+            </tr>
+            <tr>
+                <td><a href="/candidates/plot?matchedSourceID={{ previous_id }}">Previous [{{ previous_id }}]</a>&nbsp;&nbsp;<a href="/candidates/plot?matchedSourceID={{ next_id }}">Next [{{ next_id }}]</a></td>
+                <td colspan="2"></td>
+                <td colspan="2"><a target="_blank" href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a><br/><a  target="_blank" href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a></td>
+            </tr>
+        </table>
         <br/>
-        <div id="placeholder" style="width:900px;height:500px"></div>
+        
+        <table width="1500px">
+            <tr>
+                <td><div id="placeholder" style="width:1200px;height:650px"></div></td>
+                <td>SDSS Image<br/>
+                    <img border="2px" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
+                    <br/><br/>
+                    PTF Image<br/>
+                    <img border="2px" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
+                </td>
+                
+            </tr>
+            <tr>
+                <td></td>
+                <td align="center"></td>
+            </tr>
+        </table>
+        <!--<input id="reset" type="button" value="Reset axes" />-->
+        
     {% endif %}
     <!--<pre><span class=ig>some code!</span></pre>-->
 
