@@ -1,0 +1,165 @@
+/* Global HTML 
+======================================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+}
+html {
+    background: #fff;
+}
+body {
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    margin: 10px;
+    padding: 0;
+}
+
+a {
+    color: #335E79;
+}
+
+a:hover {
+    text-decoration: none;
+    color: #569ECC;
+}
+
+p {
+    margin: 0 0 18px
+}
+
+input {
+    vertical-align: middle;
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    border: 1px solid black;
+    color: #335E79;
+    padding: 2px;
+}
+
+input[type="submit"] {
+    background: #CADEEB;
+    color: #335E79;
+    border-color: #335E79;
+}
+
+input[name="openid"] {
+    background: url(openid.png) 4px no-repeat;
+    padding-left: 24px;
+}
+
+h1, h2 {
+    font-weight: normal;
+}
+
+/* Layout
+======================================================================== */
+
+/* Header */
+#header {
+    background: #fff;
+    border-top-left-radius: 10px 5px;
+    border-top-right-radius: 10px 5px;
+    
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/* Menu */
+#menu {
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+#menu ul{
+    list-style-type: none;
+}
+
+#menu ul li {
+    display: inline;
+}
+
+/* Middle */
+
+#content {
+    margin-left: 30px;
+    margin-right: 30px;
+    padding: 10px;
+    border-left: 2px solid #ddd;
+    background: #fff;
+}
+
+/* Flash messages
+======================================================================== */
+span.message {
+    text-align: center;
+    color: #64CBE8;
+    font-weight: bold;
+}
+
+span.error {
+    color: #7A1C1C;
+    font-weight: bold;
+    background: #FFBFBF;
+}
+
+span.info {
+    color: #aaa;
+    font-style:italic;
+}
+
+/* Text
+======================================================================== */
+p.text {
+    width: 500px;
+    font-size: 13pt;
+}
+
+table#candidateList {
+    border: 1px solid #000;
+}
+
+table#candidateList th {
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #000;
+}
+
+table#candidateList td {
+    text-align: center;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+table#candidateList tr.odd {
+    background: #fff;
+}
+table#candidateList tr.even {
+    background: #eee;
+}
+
+/* Images
+======================================================================== */
+.openid_logo {
+    border: 2px #000 solid;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    padding: 5px;
+    vertical-align:middle;
+}
+
+.openid_logo:hover {
+    border: 2px #0000ff solid;
+    cursor: pointer;
+    
+    -moz-box-shadow: -2px 2px 5px #888;
+    -webkit-box-shadow: -2px 2px 5px #888;
+    box-shadow: -2px 2px 5px #888;
+}
+

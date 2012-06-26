@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <!--<style type=text/css>
+    h1 { background-image: url({{ url_for('static', filename='login.png') }}); }
+  </style>-->
+{% endblock %}
+{% block title %}Login{% endblock %}
+{% block body %}
+  <!--<form action="" method=post>
+    <p>
+      For some of the features on this site (such as creating snippets
+      or adding comments) you have to be signed in.  You don't need to
+      create an account on this website, just sign in with an existing
+      <a href=http://openid.net/>OpenID</a> account.
+    <p>
+      OpenID URL:
+      <input type=text name=openid class=openid size=30>
+      <input type=hidden name=next value="{{ next }}">
+      <input type=submit value=Login>
+    <p>
+      Alternatively you can directly sign in by clicking on one of
+      the providers here in case you don't know the identity URL:
+    <ul>
+      <li><a href=?provider=aol>AOL</a>
+      <li><a href=?provider=google>Google</a>
+      <li><a href=?provider=yahoo>Yahoo</a>
+    </ul>
+  </form>-->
+  <script type="text/javascript">
+        
+        function show(id_array, show_style) {
+            show_style = typeof show_style !== 'undefined' ? show_style : 'block';
+            
+            for (var i = 0; i < id_array.length; i++) {
+                obj = document.getElementById(id_array[i]);
+                obj.style.display = show_style;
+            }
+        }
+        
+        function hide(id_array) {
+            for (var i = 0; i < id_array.length; i++) {
+                obj = document.getElementById(id_array[i]);
+                obj.style.display = "none";
+            }
+        }
+        
+        function toggle_visibility(id_array, show_style) {
+            show_style = typeof show_style !== 'undefined' ? show_style : 'block';
+            
+            for (var i = 0; i < id_array.length; i++) {
+                obj = document.getElementById(id_array[i]);
+                if (obj.style.display != "none") {
+                    obj.style.display = "none";
+                } else {
+                    obj.style.display = show_style;
+                }
+            }
+        }
+        
+    </script>
+    
+    <h2>Sign in with:</h2>
+        {% if error %}<p class="error"><strong>Error:</strong> {{ error }}</p>{% endif %}
+        <div class="openid_option">
+            <form action="" method="post" name="openid_login_form">
+                <img class="openid_logo" onClick="toggle_visibility(['openid_text', 'openid_submit'], 'inline');" width="150px" src="{{ url_for('static', filename='logos/logo_openid.png') }}" />
+                <input type="text" style="display: none;" name="openid" id="openid_text" size=30>
+                <input type="submit" style="display: none;" value="Sign in" id="openid_submit">
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+        </div>
+        <br/>
+        {% for provider_name,provider_url in providers.items() %}
+            <div class="openid_option">
+                <form action="" method="post" name="{{ provider_name }}_login_form">
+                    <input class="openid_logo" type="image" width="150px" src="{{ url_for('static', filename='logos/logo_{}.png'.format(provider_name)) }}" />
+                    <input type="hidden" name="openid" value="{{ provider_url }}">
+                    <input type="hidden" name="next" value="{{ next }}">
+                </form>
+            </div>
+
+        {% endfor %}
+{% endblock %}

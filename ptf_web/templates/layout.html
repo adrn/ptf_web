@@ -1,0 +1,56 @@
+<!doctype html>
+
+<html>
+
+<head>
+    {% block head %}
+        <title>{% block title %}PTF Microlensing Candidates{% endblock %}</title>
+        <meta charset=utf-8>
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+    {% endblock %}
+</head>
+<body>
+    <div id="wrapper">
+        <div id="header">
+            {% block body_title %}
+                <h1><span>{{ self.title() }}</span></h1>
+            {% endblock %}
+            {% for message in get_flashed_messages() %}
+                <span class="message">{{ message }}</span>
+            {% endfor %}
+        </div><!-- #header-->
+        
+        <div id="menu">
+            <ul class="navigation">
+                <li><a href="{{ url_for('general.index') }}">home</a>&nbsp;&nbsp;//
+                <li><a href="{{ url_for('candidates.index') }}">candidates</a>&nbsp;&nbsp;//
+                {% if g.user %}
+                    <li><a href="{{ url_for('general.profile') }}">profile</a>&nbsp;&nbsp;//
+                    <li><a href="{{ url_for('general.logout') }}">sign out</a>
+                {% else %}
+                    <li><a href="{{ url_for('general.login') }}">sign in</a>
+                {% endif %}
+            </ul>
+        </div><!-- menu -->
+        
+        <div id="content"><!-- content -->
+            {% block body %}{% endblock %}
+        </div><!-- #content-->            
+        <!-- #footer -->
+        <!--
+        <div id="footer">
+            &copy; Copyright 2012 by <a href="http://adrianpricewhelan.com/">APW</a> //
+            {% if g.user %}
+            <a href="{{ url_for('general.profile') }}">profile</a> /
+            <a href="{{ url_for('general.logout') }}" title="signed in as {{
+              g.user.name }} [{{ g.user.openid }}]{% if g.user.is_admin
+              %} - Administrator{% endif %}">sign out</a>
+            {% else %}
+            <a href="{{ url_for('general.login') }}">sign in</a>
+            {% endif %}
+        </div>
+        -->
+    </div><!-- #wrapper -->
+</body>
+</html>

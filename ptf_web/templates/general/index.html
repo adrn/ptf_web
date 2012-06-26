@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block body_title %}
+    {{ super() }}
+    
+    {% endblock %}
+{% block body %}
+    
+    {% if g.user %}
+        <span class="info">Logged in as: [{{ g.user.name }}]</span><br/><br/>
+    {% endif %}
+    <h2>Info</h2>
+    <hr width="100px" color="#ccc" size="1px" />
+    <br/>
+    <p class="text">
+        This is text describing the site. This is text describing the site. This is text describing the site. This is text describing the site.
+        This is text describing the site. This is text describing the site. This is text describing the site. This is text describing the site.
+    </p>
+    <!--<pre><span class=ig>some code!</span></pre>-->
+
+<!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"
+  src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>-->
+{% endblock %}

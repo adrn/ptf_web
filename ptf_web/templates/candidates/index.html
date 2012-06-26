@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block body %}
+    
+    {% if g.user %}
+        <span class="info">Logged in as: [{{ g.user.name }}]</span><br/><br/>
+    {% endif %}
+    <h2>Candidates</h2>
+    <hr width="100px" color="#ccc" size="1px" />
+    <br/>
+    <table id="candidateList" cellspacing=0>
+        <thead>
+            <th>Source ID</th>
+            <th>Field ID</th>
+            <th>CCD ID</th>
+            <th>RA</th>
+            <th>Dec</th>
+            <th>Num. of R-band<Br/>Observations</th>
+        </thead>
+        <tbody>
+            {% set row_class = cycler('odd', 'even') %}
+            {% for candidate in candidates %}
+                <tr class="{{ row_class.next() }}">
+                    <td>{{ candidate["matchedSourceID"] }}</td>
+                    <td>{{ candidate["field_id"] }}</td>
+                    <td>{{ candidate["ccd_id"] }}</td>
+                    <td>{{ "{:.5f}".format(candidate["ra"]) }}</td>
+                    <td>{{ "{:.5f}".format(candidate["dec"]) }}</td>
+                    <td>{{ candidate["num_obs"] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <!--<pre><span class=ig>some code!</span></pre>-->
+
+<!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"
+  src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>-->
+{% endblock %}

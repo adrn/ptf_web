@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block head %}
+    {{ super() }}
+    
+    <script src="{{ url_for('static', filename='js/jquery.flot.js') }}"></script>
+    <!--<script src="https://github.com/RuiPereira/flot/raw/errorbars/jquery.flot.errorbars.js"></script>-->
+    
+    <script type="text/javascript">        
+        $.ajax({
+            type: "GET",
+            url: "/candidates/data?matchedSourceID={{ light_curve.matchedSourceID }}",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                
+            }
+        });
+        
+        $.plot($("#placeholder"), [ [[0, 0], [1, 1]] ], { yaxis: { max: 1 } });
+        
+    </script>
+               
+    
+{% endblock %}
+
+{% block title %}  {% endblock %}
+
+{% block body %}
+    
+    {% if g.user %}
+        <span class="info">Logged in as: [{{ g.user.name }}]</span><br/><br/>
+    {% endif %}
+    
+    {% if light_curve != None %}
+        <h2>Source ID: {{light_curve.matchedSourceID}} </h2>
+        <hr width="100px" color="#ccc" size="1px" />
+        <br/>
+        <div id="placeholder" style="width:900px;height:500px"></div>
+    {% endif %}
+    <!--<pre><span class=ig>some code!</span></pre>-->
+
+<!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"
+  src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>-->
+{% endblock %}
