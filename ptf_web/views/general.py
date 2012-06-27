@@ -1,8 +1,10 @@
+import os
+
 from flask import Blueprint, render_template, session, redirect, url_for, \
      request, flash, g, jsonify, abort
 from flaskext.openid import COMMON_PROVIDERS
 
-from ptf_web import oid
+from ptf_web import oid, app
 #from ptf_web.search import search as perform_search
 from ptf_web.utils import requires_login, request_wants_json
 from ptf_web.database import db_session, User
@@ -14,7 +16,6 @@ def index():
     if request_wants_json():
         return jsonify(releases=[r.to_json() for r in releases])
     return render_template('general/index.html')
-
 
 """
 @mod.route('/search/')
@@ -67,6 +68,12 @@ def login():
 
 @mod.route('/first-login/', methods=['GET', 'POST'])
 def first_login():
+    with open(os.path.join(app.config['BASEDIR'], "allowed_openids")) as f:
+        allowed_openids = [x.strip() for x in f.readlines()]
+    
+    with open(os.path.join(app.config['BASEDIR'], "allowed_emails")) as f:
+        allowed_emails = [x.strip() for x in f.readlines()]
+    
     if g.user is not None or 'openid' not in session:
         return redirect(url_for('.login'))
     if request.method == 'POST':
@@ -74,7 +81,13 @@ def first_login():
             del session['openid']
             flash(u'Login was aborted')
             return redirect(url_for('general.login'))
-        db_session.add(User(request.form['name'], session['openid']))
+        
+        if (session['openid'] not in allowed_openids) and (request.form["email"] not in allowed_emails):
+            flash(u"Unauthorized user.")
+            del session['openid']
+            return redirect(url_for('general.logout'))
+        
+        db_session.add(User(request.form['name'], session['openid'], request.form["email"]))
         db_session.commit()
         flash(u'Successfully created profile and logged in!')
         return redirect(oid.get_next_url())
@@ -99,11 +112,21 @@ def profile():
 
 @oid.after_login
 def create_or_login(resp):
+    with open(os.path.join(app.config['BASEDIR'], "allowed_openids")) as f:
+        allowed_openids = [x.strip() for x in f.readlines()]
+    
     session['openid'] = resp.identity_url
+    
+    #if session['openid'] not in allowed_openids:
+    #    flash(u"Unauthorized user.")
+    #    del session['openid']
+    #    return redirect(url_for('general.logout'))
+    
     user = g.user or User.query.filter_by(openid=resp.identity_url).first()
     if user is None:
+        print "\n\n\n resp email: {} \n\n\n".format(resp.email)
         return redirect(url_for('.first_login', next=oid.get_next_url(),
-                                name=resp.fullname or resp.nickname))
+                                name=resp.fullname or resp.nickname, email=resp.email))
     if user.openid != resp.identity_url:
         user.openid = resp.identity_url
         db_session.commit()

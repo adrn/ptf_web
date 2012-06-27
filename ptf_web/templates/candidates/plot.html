@@ -77,7 +77,6 @@
                 success: dataReceived
             });
             
-            
             /*$('#radec').qtip({
                 content: "<a href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a> | <a href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a>",
                 position: {"corner" : {"target" : "topMiddle",
@@ -95,10 +94,6 @@
 {% endblock %}
 
 {% block body %}
-    
-    {% if g.user %}
-        <span class="info">Logged in as: [{{ g.user.name }}]</span><br/><br/>
-    {% endif %}
     
     {% if light_curve != None %}
         <table width="1400px" class="info">
@@ -121,10 +116,10 @@
             <tr>
                 <td><div id="placeholder" style="width:1200px;height:650px"></div></td>
                 <td>SDSS Image<br/>
-                    <img border="2px" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
+                    <img width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
                     <br/><br/>
                     PTF Image<br/>
-                    <img border="2px" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
+                    <img height="200px" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="/candidates/ptfimage?matchedSourceID={{ light_curve.matchedSourceID }}" />
                 </td>
                 
             </tr>

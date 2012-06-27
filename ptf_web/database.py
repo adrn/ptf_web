@@ -34,13 +34,15 @@ class User(Model):
     id = Column('user_id', Integer, primary_key=True)
     openid = Column('openid', String(200))
     name = Column(String(200))
+    email = Column(String(200))
 
-    def __init__(self, name, openid):
+    def __init__(self, name, openid, email):
         self.name = name
         self.openid = openid
+        self.email = email
 
     def to_json(self):
-        return dict(name=self.name, is_admin=self.is_admin)
+        return dict(name=self.name, is_admin=self.is_admin, email=self.email)
 
     @property
     def is_admin(self):

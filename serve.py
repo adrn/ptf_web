@@ -4,7 +4,7 @@
         % python serve.py
         
     Packages installed into this virtual environment:
-        pip install numpy scipy sqlalchemy flask flask-openid
+        pip install numpy scipy sqlalchemy flask flask-openid pyfits PIL
         
     TODO:
         - Create a function in candidates that accepts a Source ID and an MJD and returns

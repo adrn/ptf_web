@@ -6,3 +6,5 @@
 .Spotlight-V100
 .Trashes
 ptf_credentials
+allowed*
+venv

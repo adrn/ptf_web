@@ -1,11 +1,18 @@
+import os
+import urllib2, base64
+import cStringIO as StringIO
+import gzip
+    
 from flask import Blueprint, render_template, session, redirect, url_for, \
-     request, flash, g, jsonify, abort
+     request, flash, g, jsonify, abort, send_file
 from flaskext.openid import COMMON_PROVIDERS
 
 import numpy as np
 import sqlalchemy
+import pyfits as pf
+import Image
 
-from ptf_web import oid
+from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
 from ptf_web.database import db_session, User, lc_db_session, LightCurve
 
@@ -129,12 +136,79 @@ def data():
     
     return jsonify(light_curve=lc_dict)
 
-@mod.route('/candidates/ptfImage', methods=["GET"])
+@mod.route('/candidates/ptfimage', methods=["GET"])
 @requires_login
-def ptfImage():
+def ptfimage():
     if not request.args.has_key("matchedSourceID"):
         abort(404)
     
-    # TODO: Read in PTF credentials from ptf_credentials
+    try:
+        light_curve = lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == int(request.args["matchedSourceID"])).one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        light_curve = None
+        flash(u"Source ID not in database.")
+        abort(404)
     
-    # TODO: Image stuff..
+    with open(os.path.join(app.config['BASEDIR'],"ptf_credentials")) as f:
+        userline, passwordline = f.readlines()
+    
+    user = userline.split()[1]
+    password = passwordline.split()[1]
+    
+    try:
+        mjd = float(request.args["mjd"])
+    except:
+        mjd = light_curve.data["mjd"][0]
+    
+    ra = light_curve.ra
+    dec = light_curve.dec
+    
+    # http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS=12.5432151118,40.1539468896&size=0.005&columns=pfilename&where=obsmjd=55398.33127
+    url = "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={0},{1}&SIZE={2}&columns=pfilename&where=obsmjd={3:.5f}".format(ra, dec, 10./3600., mjd)
+    
+    http_request = urllib2.Request(url)
+    base64string = base64.encodestring("%s:%s" % (user, password)).replace('\n', '')
+    http_request.add_header("Authorization", "Basic %s" % base64string)
+    file = StringIO.StringIO(urllib2.urlopen(http_request).read())
+    filename = np.genfromtxt(file, skiprows=4, usecols=[3], dtype=str)
+    
+    fits_image_url = os.path.join(app.config['IPAC_DATA_URL'], str(filename))
+    
+    http_request = urllib2.Request(fits_image_url + "?center={0},{1}&size=50px".format(ra,dec))
+    base64string = base64.encodestring('%s:%s' % (user, password)).replace('\n', '')
+    http_request.add_header("Authorization", "Basic %s" % base64string)
+    
+    try:
+        f = StringIO.StringIO(urllib2.urlopen(http_request).read())
+    except urllib2.HTTPError:
+        flash("Error downloading image!")
+        return 
+    
+    try:
+        gz = gzip.GzipFile(fileobj=f, mode="rb")
+        gz.seek(0)
+        
+        fitsFile = StringIO.StringIO(gz.read())
+    except IOError:
+        fitsFile = f
+    
+    fitsFile.seek(0)
+    
+    hdulist = pf.open(fitsFile, mode="readonly")
+    
+    image_data = hdulist[0].data
+    scaled_image_data = (255*(image_data - image_data.min()) / (image_data.max() - image_data.min())).astype(np.uint8)
+    
+    image = Image.fromarray(scaled_image_data)
+    
+    output = StringIO.StringIO()
+    image.save(output, format="png")
+    #image.save(open("test.png", "w"), format="png")
+    
+    #contents = output.getvalue()
+    #output.close()
+    
+    output.seek(0)
+    
+    #print 'Content-Type:image/png\n'
+    return send_file(output, mimetype="image/png")

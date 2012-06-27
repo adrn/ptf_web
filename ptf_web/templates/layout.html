@@ -23,11 +23,11 @@
         
         <div id="menu">
             <ul class="navigation">
-                <li><a href="{{ url_for('general.index') }}">home</a>&nbsp;&nbsp;//
-                <li><a href="{{ url_for('candidates.index') }}">candidates</a>&nbsp;&nbsp;//
+                <li><a href="{{ url_for('general.index') }}">home</a>&nbsp;&nbsp;//</li>
+                <li><a href="{{ url_for('candidates.index') }}">candidates</a>&nbsp;&nbsp;//</li>
                 {% if g.user %}
-                    <li><a href="{{ url_for('general.profile') }}">profile</a>&nbsp;&nbsp;//
-                    <li><a href="{{ url_for('general.logout') }}">sign out</a>
+                    <li><a href="{{ url_for('general.profile') }}">profile</a>&nbsp;&nbsp;//</li>
+                    <li><a href="{{ url_for('general.logout') }}">sign out</a>&nbsp;&nbsp;<span class="info">Logged in as: [{{ g.user.name }}]</span></li>
                 {% else %}
                     <li><a href="{{ url_for('general.login') }}">sign in</a>
                 {% endif %}
