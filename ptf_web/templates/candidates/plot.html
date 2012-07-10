@@ -3,10 +3,8 @@
 {% block head %}
     {{ super() }}
     
-    <script src="{{ url_for('static', filename='js/flot/jquery.flot.js') }}"></script>
-    <script language="javascript" type="text/javascript" src="{{ url_for('static', filename='js/flot/jquery.flot.selection.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.flot.errorbars.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery.qtip-1.0.0-rc3.min.js') }}"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.0/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='js/graph/js/jquery.graph.js') }}"></script>
     
     <script type="text/javascript">
         array_max = function( array ){
@@ -18,50 +16,26 @@
         };
         
         function dataReceived(data) {
-            var options = { yaxis : { transform: function (v) { return -v; },
-                                      inverseTransform: function (v) { return -v; },
-                                      min : array_min(data.light_curve.mag)-0.1,
-                                      max : array_max(data.light_curve.mag)+0.1 } ,
-                            xaxis : { min : array_min(data.light_curve.mjd)-0.2, 
-                                      max : array_max(data.light_curve.mjd)+0.2 }, 
-                            points : { show : true,
-                                       lineWidth : 0,
-                                       radius : 2 ,
-                                       fill : true,
-                                       fillColor : "rgba(0,0,0,0.4)",
-                                       errorbars : "y",
-                                       yerr : { show : true } },
-                            lines : { show : false },
-                            colors : ["black"]
-                           }
-                           //selection: { mode : "xy" }
-            
             var plot_data = [];
             for (ii in data.light_curve.mjd) {
-                plot_data[ii] = [data.light_curve.mjd[ii], data.light_curve.mag[ii], data.light_curve.error[ii]];
-                //console.log(plot_data[ii]);
+                plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
             }
+
+            // Define some options
+            options = {
+                xaxis:{ label:'Day (MJD - Epoch)' },
+                yaxis: { label: 'R (mag)' }
+            };
             
-            $.plot($("#placeholder"), [plot_data], options);
-            /*
-            $("#placeholder").bind("plotselected", function (event, ranges) {
-                plot = $.plot($("#placeholder"), 
-                              plot_data,
-                              $.extend(true, {}, options, {
-                                       xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to },
-                                       yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to }
-                                       })
-                             );
-            });
+            var graph = $.graph('placeholder', {
+                data: plot_data,
+                color: "#1E67BA",
+                points: { show: true, radius: 1.5 },
+                lines: { show: false, width: 4 },
+                hoverable: true, 
+                clickable: true
+            }, options);
             
-            $("#reset").click(function () {
-                plot.clearSelection();
-                //plot.draw();
-                plot = $.plot(placeholder, 
-                    [ plot_data ], 
-                    options
-                );
-            });*/
         }
         
         function parsePTFImageQuery(textData) {
@@ -76,17 +50,6 @@
                 dataType: "json",
                 success: dataReceived
             });
-            
-            /*$('#radec').qtip({
-                content: "<a href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a> | <a href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a>",
-                position: {"corner" : {"target" : "topMiddle",
-                                       "tooltip" : "bottomMiddle"}
-                          },
-                style: { 
-                    name: 'blue' // Inherit from preset style
-                },
-                show : {"delay" : 0}
-            });*/
         });
     </script>
                
@@ -112,9 +75,9 @@
         </table>
         <br/>
         
-        <table width="1500px">
+        <table width="100%">
             <tr>
-                <td><div id="placeholder" style="width:1200px;height:650px"></div></td>
+                <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
                 <td>SDSS Image<br/>
                     <img width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
                     <br/><br/>
