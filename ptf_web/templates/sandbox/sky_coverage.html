@@ -1,0 +1,330 @@
+<!-- To produce the data for this page:
+    
+    1) Use Python to generate the JSON data
+        json_data = coverageplots.fits_to_json("data/exposureData.fits")
+        f = open("ptf_fields.json", "w"); f.write(json_data); f.close()
+    
+    2) Copy JSON file to ptf_web/static/json/
+    
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+        <script src="{{ url_for('static', filename='js/d3.v2.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/jquery-tooltip/jquery.tooltip.min.js') }}"></script>
+        
+        <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='colorbrewer.css') }}"/>
+        
+        <style type="text/css">
+            html, body {
+                font-family: "Helvetica Neue", Helvetica;
+                font-weight: 300;
+                background: #343434;
+                overflow: hidden;
+                
+                margin: 0;
+                padding: 0;
+                height: 100%;
+            }
+            
+            #container {
+                width: 100%;
+                min-height: 100%;
+                
+                margin: 0 auto;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica;
+            }
+            
+            #chart, #header, #footer {
+                position: absolute;
+                top: 0;
+            }
+            
+            #header, #footer {
+              z-index: 1;
+              display: block;
+              text-shadow: -1px 1px 0 #000;
+            }
+            
+            #header {
+                left: 0px;
+                top: 80px;
+                width: 25%;
+                min-width: 300px;
+                padding-left: 25px;
+            }
+            
+            .hint {
+                font-size: 20px;
+                color: #bbb;
+            }
+            
+            .title {
+                color: rgb(145, 191, 219);
+                font-size: 42px;
+                font-weight: 400;
+            }
+            
+            #footer {
+                color: #bbb;
+                right: 140px;
+                text-align: right;
+                top: 95%;
+            }
+            
+            div#tooltip {
+                text-align: left;
+                line-height: 25px;
+                padding: 4px;
+                
+                background: rgba(255, 237, 160, 0.7);
+                position: absolute;
+                display: none;
+                
+                font-size: 16pt;
+                color: #555;
+                border-radius: 3px;
+                
+                -moz-box-shadow: -2px 2px 5px #444;
+                -webkit-box-shadow: -2px 2px 5px #444;
+                box-shadow: -2px 2px 5px #444;
+            }
+            
+            strong {
+                font-weight: 400;
+            }
+            
+            rect {
+              fill: none;
+              pointer-events: all;
+            }
+            
+            pre {
+              font-size: 18px;
+            }
+            
+            line {
+              stroke: #000;
+              stroke-width: 1.5px;
+            }
+            
+            .string, .regexp {
+              color: #f39;
+            }
+            
+            .keyword {
+              color: #00c;
+            }
+            
+            .comment {
+              color: #777;
+              font-style: oblique;
+            }
+            
+            .number {
+              color: #369;
+            }
+            
+            .class, .special {
+              color: #1181B8;
+            }
+            
+            .indent {
+                margin: 0;
+                padding-left: 20px;
+                line-height: 30px;
+            }
+            
+            .small {
+                font-size: 13pt;
+            }
+            
+            a:link, a:visited {
+              color: #000;
+              text-decoration: none;
+            }
+            
+            a:hover {
+              color: #666;
+            }
+            
+            svg {
+              pointer-events: all;
+            }
+            
+            circle {
+              fill: #dbe4f0;
+            }
+            
+            path {
+              /*fill: #fff;
+              fill-opacity: 0.5;*/
+              stroke: #777;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <div id="container">
+            <div id="header">
+                <div class="title">PTF Sky Coverage</div>
+                <div class="hint">
+                    <p class="indent">
+                        - data as of 2012-05-22<br/>
+                        - shown in equatorial coordinates<br/>
+                        - drag to rotate the origin<br/>
+                        - mouse over to get field info<br/>
+                    </p>
+                    <br/>
+                    <hr align="left" width="50%" color="#ccc" size="1px" />
+                    <strong>Projection:</strong>
+                    <select>
+                        <option value="equalarea">equalarea</option>
+                        <option value="equidistant">equidistant</option>
+                        <option value="gnomonic">gnomonic</option>
+                        <option value="orthographic" selected>orthographic</option>
+                        <option value="stereographic">stereographic</option>
+                    </select>
+                    <br/><hr align="left" width="50%" color="#ccc" size="1px" />
+                    <strong>Go to:</strong></br>
+                    <p class="indent">
+                        <input type="button" onclick="moveToCoordinates(86.42, -29.0);" value="Galactic Center" /><br/>
+                        <input type="button" onclick="moveToCoordinates(-105, 5.0);" value="Orion" /><br/>
+                        <input type="button" onclick="moveToCoordinates(-50.0, 19.7);" value="Praesepe" />
+                    </p><br/>
+                    <p class="indent small">
+                        RA: <input type="text" placeholder="e.g. 136.124" id="ra" size=12 /><br/>
+                        Dec: <input type="text" placeholder="e.g. 25.431" id="dec" size=12 /><br/>
+                        <input type="button" value="&nbsp;&nbsp;&nbsp;&nbsp;Go&nbsp;&nbsp;&nbsp;&nbsp;" onclick="moveToCoordinates($('#ra').val()-180.0, $('#dec').val());"  />
+                    </p>
+                </div>            
+            </div>
+            <div id="footer">
+                &lt;adrn at astro.columbia.edu&gt;
+            </div>
+        </div>
+    
+        <div id="tooltip"></div>
+        
+        <script type="text/javascript">
+            var feature;
+    
+            var scale_amount = $("#container").height()/2 - 20;
+            
+            var projection = d3.geo.azimuthal()
+                .scale(scale_amount)
+                .origin([0.0, 0.0])
+                .mode("orthographic")
+                .translate([$("#container").width()/2, scale_amount+20]);
+            
+            var circle = d3.geo.greatCircle()
+                .origin(projection.origin());
+            
+            // TODO fix d3.geo.azimuthal to be consistent with scale
+            var scale = {
+              orthographic: 380,
+              stereographic: 380,
+              gnomonic: 380,
+              equidistant: 380 / Math.PI * 2,
+              equalarea: 380 / Math.SQRT2
+            };
+            
+            var path = d3.geo.path()
+                .projection(projection);
+            
+            var svg = d3.select("#container").append("svg:svg")
+                .attr("width", $("#container").width())
+                .attr("height", $("#container").height())
+                .on("mousedown", mousedown);
+            
+            // HACK
+            d3.json("{{ url_for('static', filename='json/ptf_fields.json') }}", function(collection) {
+              feature = svg.selectAll("path")
+                  .data(collection.features)
+                .enter().append("svg:path")
+                  .attr("d", clip)
+                  .attr("fill", function(d) { return d.properties.color; })
+                  .attr("fill-opacity", function(d) { return d.properties.alpha; })
+                  .on("mouseover", mouseover)
+                  .on("mouseout", mouseout);
+                  
+            });
+            
+            d3.select(window)
+                .on("mousemove", mousemove)
+                .on("mouseup", mouseup);
+            
+            d3.select("select").on("change", function() {
+              projection.mode(this.value).scale(scale[this.value]);
+              refresh(750);
+            });
+            
+            var m0,
+                o0;
+            
+            function mousedown() {
+              m0 = [d3.event.pageX, d3.event.pageY];
+              o0 = projection.origin();
+              d3.event.preventDefault();
+            }
+            
+            function mousemove() {
+              if (m0) {
+                var m1 = [d3.event.pageX, d3.event.pageY],
+                    o1 = [o0[0] + (m0[0] - m1[0]) / 8, o0[1] + (m1[1] - m0[1]) / 8];
+                projection.origin(o1);
+                circle.origin(o1)
+                refresh();
+              }
+            }
+            
+            function mouseup() {
+              if (m0) {
+                mousemove();
+                m0 = null;
+              }
+              //$('div#tooltip').css("display", "none");
+            }
+            
+            function mouseover(d) {
+                $('div#tooltip').html("<strong>Field:</strong> " + d.properties.name + "<br/>" + 
+                                      "<strong>Num. Obs:</strong> " + d.properties.number_of_observations + "<br/>" + 
+                                      "<strong>RA:</strong> " + d.properties.ra + "<br/>" + 
+                                      "<strong>Dec:</strong> " + d.properties.dec);
+                $('div#tooltip').css("display", "block")
+            }
+            
+            function mouseout(d) {
+                $('div#tooltip').css("display", "none");
+            }
+            
+            function refresh(duration) {
+              (duration ? feature.transition().duration(duration) : feature).attr("d", clip);
+            }
+            
+            function clip(d) {
+              return path(circle.clip(d));
+            }
+            
+            $(document).bind('mousemove', function(e){
+                $('div#tooltip').css({
+                   left:  e.pageX+5,
+                   top:   e.pageY+5
+                });
+            });
+            
+            function moveToCoordinates(x,y) {
+                if ((x != undefined) && (y != undefined)) {
+                    projection.origin([x,y]);
+                    circle.origin([x,y]);
+                    refresh();
+                }
+            }
+    
+        </script>
+    </body>
+</html>

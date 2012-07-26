@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block head %}
+    {{ super() }}
+    
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $("tr").click(function(){
+                window.location = $(this).attr("url");
+            });
+            
+            $("tr.even").hover(
+                function(){
+                    $(this).css({"background":"#80C3E0"});
+                    $(this).css({"cursor":"pointer"});
+                },
+                function(){
+                    $(this).css({"background":"#eee"});
+                    $(this).css({"cursor":"default"});
+                }
+            );
+            
+            $("tr.odd").hover(
+                function(){
+                    $(this).css({"background":"#90DCFC"});
+                    $(this).css({"cursor":"pointer"});
+                },
+                function(){
+                    $(this).css({"background":"#fff"});
+                    $(this).css({"cursor":"default"});
+                }
+            );
+            
+        });
+    </script>
+{% endblock %}
+
+{% block body %}
+    
+    <h2>Fields available to plot:</h2>
+    <hr width="100px" color="#ccc" size="1px" />
+    <br/>
+        {% set row_class = cycler('odd', 'even') %}
+        {% for field in fields %}
+            <a href="/sandbox/grid_plot?field_id={{field}}">{{ field }}</a><br/>
+        {% endfor %}
+    <!--<pre><span class=ig>some code!</span></pre>-->
+
+<!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"
+  src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>-->
+{% endblock %}
