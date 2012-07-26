@@ -3,6 +3,7 @@ import os
 BASEDIR = _basedir = os.path.abspath(os.path.dirname(__file__))
 ptf_basedir = "/home/adrian/projects/ptf"
 LIGHT_CURVE_PATH = os.path.join(ptf_basedir, "data/candidates/light_curves/")
+CSV_PATH = os.path.join(ptf_basedir, "data/js/")
 
 DEBUG = False
 SERVER_NAME = "deimos.astro.columbia.edu:5000"
