@@ -5,10 +5,11 @@ import os, sys
 import glob
 import sqlite3
 from datetime import datetime
+import cPickle as pickle
 
 # Third party
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, \
-     ForeignKey, event
+     ForeignKey
 from sqlalchemy.orm import scoped_session, sessionmaker, backref, relation
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -112,19 +113,24 @@ class LightCurve(lc_Model):
                     num_obs=self.num_obs)
     @property
     def data(self):
-        filename = os.path.join(app.config['LIGHT_CURVE_PATH'], "field{}_ccd{}_id{}.npy".format(self.field_id, self.ccd_id, self.matchedSourceID))
-        all_data = np.load(filename)
-        srt = np.argsort(all_data["mjd"])
+        filename = os.path.join(app.config['LIGHT_CURVE_PATH'], "field{:06d}_ccd{:02d}_source{:06d}.pickle".format(self.field_id, self.ccd_id, self.matchedSourceID))
+        f = open(filename)
+        light_curve = pickle.load(f)
+        f.close()
+        #srt = np.argsort(all_data["mjd"])
         
-        return dict(mjd=all_data["mjd"][srt], 
-                    mag=all_data["mag"][srt],
-                    error=all_data["magErr"][srt])
+        return dict(mjd=light_curve.mjd, 
+                    mag=light_curve.mag,
+                    error=light_curve.error)
     
     @property
     def num_obs(self):
-        filename = os.path.join(app.config['LIGHT_CURVE_PATH'], "field{}_ccd{}_id{}.npy".format(self.field_id, self.ccd_id, self.matchedSourceID))
-        all_data = np.load(filename)
-        return len(all_data)
+        filename = os.path.join(app.config['LIGHT_CURVE_PATH'], "field{:06d}_ccd{:02d}_source{:06d}.pickle".format(self.field_id, self.ccd_id, self.matchedSourceID))
+        f = open(filename)
+        light_curve = pickle.load(f)
+        f.close()
+        
+        return len(light_curve.exposures)
     
     def __eq__(self, other):
         if other is None:
@@ -138,36 +144,36 @@ class LightCurve(lc_Model):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 def init_light_curve_db():
     lc_Model.metadata.create_all(bind=lc_engine)
 
-    pattr = re.compile("field(\d+)_ccd(\d+)_id(\d+).npy")
-    for lc_file in glob.glob(os.path.join(app.config['LIGHT_CURVE_PATH'], "*.npy")):
+    for lc_file in glob.glob(os.path.join(app.config['LIGHT_CURVE_PATH'], "*.pickle")):
         try:
-            field_id, ccd_id, source_id = map(int, pattr.search(lc_file).groups())
-        except AttributeError:
-            logging.info("Failed to parse filename")
-            continue
+            f = open(lc_file)
+            light_curve = pickle.load(f)
+            f.close()
+        except IOError:
+            print "Unable to open light curve file: {}".format(lc_file)
+            raise
         
-        print lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == source_id).count()
-        if lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == source_id).count() == 0:
-            object_data = np.load(lc_file)
-            
-            lc_db_session.add(LightCurve(matchedSourceID=source_id,\
-                                         field_id=field_id,\
-                                         ccd_id=ccd_id,\
-                                         ra=np.mean(object_data["alpha_j2000"]),\
-                                         dec=np.mean(object_data["delta_j2000"]),\
+        if lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == light_curve.source_id).count() == 0:            
+            lc_db_session.add(LightCurve(matchedSourceID=light_curve.source_id,\
+                                         field_id=light_curve.field_id,\
+                                         ccd_id=light_curve.ccd_id,\
+                                         ra=light_curve.metadata["ra"],\
+                                         dec=light_curve.metadata["dec"],\
                                          obj_type="")\
                               )
             lc_db_session.commit()
         else:
-            logging.debug("Light curve {} already in database".format(source_id))
+            logging.debug("Light curve {} already in database".format(light_curve.source_id))
     
     logging.info("Committing light curves")
 
+
 def init_db():
-    init_user_db()
+    #init_user_db()
     init_light_curve_db()
 
 if __name__ == "__main__":
@@ -175,6 +181,8 @@ if __name__ == "__main__":
     init_db()
 
 '''
+old way:
+
 # Third-party
 import numpy as np
 
