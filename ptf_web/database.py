@@ -157,7 +157,10 @@ def init_light_curve_db():
             print "Unable to open light curve file: {}".format(lc_file)
             raise
         
-        if lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == light_curve.source_id).count() == 0:            
+        if lc_db_session.query(LightCurve).\
+            filter(LightCurve.field_id == light_curve.field_id).\
+            filter(LightCurve.matchedSourceID == light_curve.source_id).\
+            filter(LightCurve.ccd_id == light_curve.ccd_id).count() == 0:
             lc_db_session.add(LightCurve(matchedSourceID=light_curve.source_id,\
                                          field_id=light_curve.field_id,\
                                          ccd_id=light_curve.ccd_id,\
