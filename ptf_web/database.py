@@ -88,7 +88,8 @@ class LightCurve(lc_Model):
     
     #(source_id int, field_id int, ra real, dec real, looked_at int, obj_type text
     
-    matchedSourceID = Column('matchedSourceID', Integer, primary_key=True)
+    pk = Column("pk", Integer, primary_key=True)
+    matchedSourceID = Column('matchedSourceID', Integer)
     field_id = Column('field_id', Integer)
     ccd_id = Column('ccd_id', Integer)
     ra = Column('ra', Float)
