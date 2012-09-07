@@ -1,20 +1,18 @@
+# Standard library
 import os
-import urllib2, base64
-import cStringIO as StringIO
-import gzip
     
 from flask import Blueprint, render_template, session, redirect, url_for, \
      request, flash, g, jsonify, abort, send_file
 from flaskext.openid import COMMON_PROVIDERS
 
 import numpy as np
-import sqlalchemy
 import pyfits as pf
-import Image
+
+from ptf.db.mongodb import update_candidate_status
 
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, light_curve_collection
+from ptf_web.database import db_session, User, light_curve_collection, candidate_status_collection
 
 mod = Blueprint('candidates', __name__)
 
@@ -51,10 +49,21 @@ def candidate_list():
         if not c.has_key("delta_chi_squared"):
             c["delta_chi_squared"] = ""
             
-        candidates.append(dict([(key,val) for key,val in c.items() if key != "_id"]))
+        c_dict = dict([(key,val) for key,val in c.items() if key != "_id"])
+        
+        raw_status = candidate_status_collection.find_one({"light_curve_id" : c["_id"]})
+        if raw_status == None:
+            c_dict["status"] = "<font color='#aaaaaa'>none</font>"
+        else:
+            if raw_status["status"] == "Candidate":
+                c_dict["status"] = "<font color='rgba(215, 25, 28, 0.95)'>{}</font>".format(raw_status["status"])
+            else:
+                c_dict["status"] = raw_status["status"]
+                
+        candidates.append(c_dict)
     
     return jsonify(aaData=list(candidates))
-
+    
 @mod.route('/json/candidate_data', methods=["GET"])
 @requires_login
 def candidate_data():
@@ -68,12 +77,23 @@ def candidate_data():
     raw_candidate = light_curve_collection.find_one(search)
     candidate = dict([(key,val) for key,val in raw_candidate.items() if key != "_id"])
     
+    raw_status = candidate_status_collection.find_one({"light_curve_id" : raw_candidate["_id"]})
+    if raw_status == None:
+        candidate["status"] = ""
+    else:
+        candidate["status"] = raw_status["status"]
+        
     return jsonify(light_curve=candidate)
 
 @mod.route('/candidates', methods=["GET"])
 @requires_login
 def index():
-    return render_template('candidates/index.html')
+    if request.args.has_key("onlyUnknown"):
+        only_unknown_checked = "true"
+    else:
+        only_unknown_checked = "false"
+        
+    return render_template('candidates/index.html', only_unknown_checked=only_unknown_checked)
 
 @mod.route('/candidates/plot', methods=["GET"])
 @requires_login
@@ -84,6 +104,15 @@ def plot():
     source_id = int(request.args["source_id"])
     field_id = int(request.args["field_id"])
     ccd_id = int(request.args["ccd_id"])
+    
+    if request.args.has_key("update_status"):
+        if request.args["update_status"] == "true":
+            try:
+                status = request.args["status"].strip()
+            except KeyError:
+                status = ""
+            
+            update_candidate_status(field_id, ccd_id, source_id, status, light_curve_collection, candidate_status_collection)
     
     return render_template('candidates/plot.html', field_id=field_id, ccd_id=ccd_id, source_id=source_id)
 

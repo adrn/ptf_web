@@ -37,6 +37,16 @@
         });
     </script>-->
     
+    <script type="text/javascript">
+        function toggleUnknown(dataTable) {
+                if ($("#onlyUnknown").attr("checked") == "checked") {
+                    dataTable.fnFilter('none', 4);
+                } else {
+                    dataTable.fnFilter('', 4);
+                }
+            }
+    </script>
+    
 {% endblock %}
 
 {% block body %}
@@ -44,6 +54,10 @@
     <h2>Candidates</h2>
     <hr width="100px" color="#ccc" size="1px" />
     <br/>
+    <h3>Only show unknown: </h3>
+    <form name="tableConfig" style="display: inline;">
+        <input type="checkbox" id="onlyUnknown" name="onlyUnknown" onChange="toggleUnknown(dataTable);" />
+    </form>
     
     <table id="candidateList" cellspacing="0">
         <thead>
@@ -51,6 +65,7 @@
             <th>CCD ID</th>
             <th>Source ID</th>
             <th>&Delta;&chi;<sup>2</sup></th>
+            <th>Status</th>
             <!--<th>RA</th>
             <th>Dec</th>
             <th>Num. of R-band<Br/>Observations</th>-->
@@ -66,6 +81,7 @@
                 <th><input type="text" name="search_ccd_id" value="Search ccds" class="search_init" /></th>
                 <th><input type="text" name="search_source_id" value="Search sources" class="search_init" /></th>
                 <th><input type="text" name="search_delta_chi_sq" value="Search " class="search_init" /></th>
+                <th><input type="text" name="search_status" value="Search status" class="search_init" /></th>
             </tr>
         </tfoot>        
     </table>
@@ -77,6 +93,7 @@
         var dataTable;
         
         $(document).ready(function() {
+            
             var ajax_source = "/json/candidate_list";
             
             dataTable = $('#candidateList').dataTable( {
@@ -86,14 +103,15 @@
                     { "mData" : "field_id" },
                     { "mData" : "ccd_id" },
                     { "mData" : "source_id" },
-                    { "mData" : "delta_chi_squared" }
+                    { "mData" : "delta_chi_squared" },
+                    { "mData" : "status" }
                 ],
                 "bPaginate" : false,
                 "bSort" : false,
                 "oLanguage": {
                     "sSearch": "Search all columns:"
                 },
-                "fnDrawCallback": function () {
+                "fnDrawCallback": function () {                    
                     $("#candidateList tbody tr").click( function( e ) {                        
                         var field = $(this).children()[0].innerText;
                         var ccd_id = $(this).children()[1].innerText;
@@ -108,9 +126,20 @@
                         );
                         
                     });
+                    
+                    $("#candidateList tbody tr").mouseover( function(e) {
+                        $(this).attr("oldClass", $(this).attr("class"));
+                        $(this).attr("class", "mouseover");
+                        $(this).css("cursor", "pointer");
+                    });
+                    
+                    $("#candidateList tbody tr").mouseout( function(e) {
+                        $(this).attr("class", $(this).attr("oldClass"));
+                        $(this).css("cursor", "default");
+                    });
                 }
             } );
-             
+            
             $("tfoot input").keyup( function () {
                 /* Filter on the column (the index) of this element */
                 dataTable.fnFilter( this.value, $("tfoot input").index(this) );

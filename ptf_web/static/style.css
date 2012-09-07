@@ -28,7 +28,7 @@ p {
     margin: 0 0 18px
 }
 
-input {
+input.oid {
     vertical-align: middle;
     font-family: 'Georgia', serif;
     font-size: 16px;
@@ -48,8 +48,13 @@ input[name="openid"] {
     padding-left: 24px;
 }
 
-h1, h2 {
+h1, h2, h3 {
     font-weight: normal;
+}
+
+h3 {
+    color: #666666;
+    display: inline;
 }
 
 /* Layout
@@ -205,3 +210,51 @@ table.info tr.titles td.last {
     box-shadow: -2px 2px 5px #888;
 }
 
+/* Candidate form
+======================================================================== */
+
+input[type=submit] {
+    display: inline-block;
+	outline: none;
+	cursor: pointer;
+	text-align: center;
+	text-decoration: none;
+	font: 20px/100% Arial, Helvetica, sans-serif;
+	padding: 10px;
+	text-shadow: 0 1px 1px rgba(0,0,0,.3);
+	-webkit-border-radius: .5em; 
+	-moz-border-radius: .5em;
+	border-radius: .5em;
+	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+
+input[type=submit].galaxy {
+    background-color: rgba(44, 123, 182, 0.75);
+}
+
+input[type=submit].candidate {
+    background-color: rgba(215, 25, 28, 0.75);
+}
+
+input[type=submit].boring {
+    background-color: rgba(171, 217, 233, 0.75);
+}
+
+input[type=submit].interesting {
+    background-color: rgba(253, 174, 97, 0.75);
+}
+
+#statusBanner {
+    font-size: 18pt;
+    font-weight: bolt;
+    font-family: Helvetica neue;
+    
+    padding-top: 8px;
+    padding-bottom: 8px;
+    
+    -webkit-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
+	-moz-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
+	box-shadow: 2px 2px 4px rgba(0,0,0,.6);
+}

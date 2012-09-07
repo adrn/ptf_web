@@ -59,6 +59,30 @@
             var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=40&height=40".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssImage").attr("src", sdssImageURL);
             
+            // Set PTF image link
+            var ptfImageURL = "/ptfimage?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}";
+            $("#ptfImage").attr("src", ptfImageURL);
+            
+            // Set status text
+            var status = data.light_curve.status;
+            var statusColor;
+            
+            if (status == "Galaxy") {
+                statusColor = "rgba(44, 123, 182, 0.5)";
+            } else if (status == "Boring") {
+               statusColor = "rgba(171, 217, 233, 0.75)";
+            } else if (status == "Interesting") {
+                statusColor = "rgba(253, 174, 97, 0.75)";
+            } else if (status == "Candidate") {
+                statusColor = "rgba(215, 25, 28, 0.5)";
+            } else {
+                $("#statusBanner").css("display", "none");
+            }
+            
+            $("#statusBanner").text("" + data.light_curve.status);
+            $("#statusBanner").css("background-color", statusColor);
+            
+            // Setup the graph
             var graph = $.graph('placeholder', {
                 data: plot_data,
                 color: "#1E67BA",
@@ -91,6 +115,10 @@
 {% block body %}
     
     <table width="1400px" class="info">
+        <tr class="status">
+            <td colspan="8" id="statusBanner">
+            </td>
+        </tr>
         <tr class="titles">
             <td><font class="key">Field ID:</font> <font class="val">{{field_id}}</font></td>
             <td><font class="key">CCD ID:</font> <font class="val">{{ccd_id}}</font></td>
@@ -110,11 +138,31 @@
     <table width="100%">
         <tr>
             <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
-            <td>SDSS Image<br/>
+            <td align="center">
+                
+                <form method="get">
+                    <input type="hidden" name="field_id" value="{{ field_id }}" />
+                    <input type="hidden" name="ccd_id" value="{{ ccd_id }}" />
+                    <input type="hidden" name="source_id" value="{{ source_id }}" />
+                    <input type="hidden" name="update_status" value="true" />
+                    
+                    <input type="submit" id="flagAsGalaxy" name="status" value="Galaxy" class="galaxy" />
+                    <input type="submit" id="flagAsBoring" name="status" value="Boring" class="boring" /><br/><br/>
+                    <input type="submit" id="flagAsInteresting" name="status" value="Interesting" class="interesting" />
+                    <input type="submit" id="flagAsCandidate" name="status" value="Candidate" class="candidate" />
+                </form>
+                
+                <br/><br/>
+                <hr width="75%"/>
+                <br/>
+                
+                SDSS Image<br/>
                 <img id="sdssImage" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
                 <br/><br/>
+                <!-- TODO: Make this optional (button 'Load PTF Image')
                 PTF Image<br/>
-                
+                <img id="ptfImage" height="200px" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
+                -->
             </td>
             
         </tr>
