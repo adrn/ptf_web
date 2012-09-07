@@ -7,6 +7,7 @@
     <script src="{{ url_for('static', filename='js/graph/js/jquery.graph.js') }}"></script>
     
     <script type="text/javascript">
+        /* Misc. Useful functions */
         array_max = function( array ){
             return Math.max.apply( Math, array );
         };
@@ -14,11 +15,23 @@
         array_min = function( array ){
             return Math.min.apply( Math, array );
         };
+
+        String.prototype.format = String.prototype.f = function() {
+            var s = this,
+                i = arguments.length;
+        
+            while (i--) {
+                s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+            }
+            return s;
+        };
+        
+        /* -------------------------------------------------- */
         
         function dataReceived(data) {
             var plot_data = [];
             for (ii in data.light_curve.mjd) {
-                plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
+                plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : -data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
             }
 
             // Define some options
@@ -27,11 +40,30 @@
                 yaxis: { label: 'R (mag)' }
             };
             
+            // Set data-dependent fields
+            var baseline = array_max(data.light_curve.mjd) - array_min(data.light_curve.mjd);
+            $("#numObservations").text("" + plot_data.length);
+            $("#baseline").text("" + parseInt(baseline) + " days");
+            $("#ra").text("" + data.light_curve.ra.toFixed(5));
+            $("#dec").text("" + data.light_curve.dec.toFixed(5));
+            
+            // Set SDSS link url
+            var sdssURL = "http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={0}&dec={1}&radius=5&format=csv&topnum=20".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
+            $("#sdssLink").attr("href", sdssURL);
+            
+            // Set SIMBAD link url
+            var simbadURL = "http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={0}%20{1}&Radius=10&Radius.unit=arcsec".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
+            $("#simbadLink").attr("href", simbadURL);
+            
+            // Set SDSS image link
+            var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=40&height=40".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
+            $("#sdssImage").attr("src", sdssImageURL);
+            
             var graph = $.graph('placeholder', {
                 data: plot_data,
                 color: "#1E67BA",
-                points: { show: true, radius: 1.5 },
-                lines: { show: false, width: 4 },
+                points: { show: true, radius: 3 },
+                lines: { show: false, width: 2 },
                 hoverable: true, 
                 clickable: true
             }, options);
@@ -45,7 +77,7 @@
         $(document).ready(function() {
             $.ajax({
                 type: "GET",
-                url: "/candidates/data?matchedSourceID={{ light_curve.matchedSourceID }}",
+                url: "/json/candidate_data?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: dataReceived
@@ -58,42 +90,41 @@
 
 {% block body %}
     
-    {% if light_curve != None %}
-        <table width="1400px" class="info">
-            <tr class="titles">
-                <td><font class="key">Source ID:</font> <font class="val">{{light_curve.matchedSourceID}}</font></td>
-                <td><font class="key">Num. Observations:</font> <font class="val">{{light_curve.num_obs}}</font></td>
-                <td><font class="key">Baseline:</font> <font class="val">{{"{:.2f}".format(light_curve.data["mjd"][-1]-light_curve.data["mjd"][0])}} days</font></td>
-                <td><font class="key">RA:</font> <font class="val">{{"{:.5f}".format(light_curve.ra)}}</font></td>
-                <td class="last"><font class="key">Dec:</font> <font class="val">{{"{:.5f}".format(light_curve.dec)}}</font></td>
-            </tr>
-            <tr>
-                <td><a href="/candidates/plot?matchedSourceID={{ previous_id }}">Previous [{{ previous_id }}]</a>&nbsp;&nbsp;<a href="/candidates/plot?matchedSourceID={{ next_id }}">Next [{{ next_id }}]</a></td>
-                <td colspan="2"></td>
-                <td colspan="2"><a target="_blank" href='http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={{light_curve.ra}}%20{{light_curve.dec}}&Radius=5&Radius.unit=arcsec'>Search in SIMBAD</a><br/><a  target="_blank" href='http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={{light_curve.ra}}&dec={{light_curve.dec}}&radius=5&format=csv&topnum=20'>Search in SDSS</a></td>
-            </tr>
-        </table>
-        <br/>
-        
-        <table width="100%">
-            <tr>
-                <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
-                <td>SDSS Image<br/>
-                    <img width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={{light_curve.ra}}&dec={{light_curve.dec}}&width=40&height=40" />
-                    <br/><br/>
-                    PTF Image<br/>
-                    <img height="200px" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" src="/candidates/ptfimage?matchedSourceID={{ light_curve.matchedSourceID }}" />
-                </td>
+    <table width="1400px" class="info">
+        <tr class="titles">
+            <td><font class="key">Field ID:</font> <font class="val">{{field_id}}</font></td>
+            <td><font class="key">CCD ID:</font> <font class="val">{{ccd_id}}</font></td>
+            <td><font class="key">Source ID:</font> <font class="val">{{source_id}}</font></td>
+            <td><font class="key">Num. Observations:</font> <font class="val" id="numObservations"></font></td>
+            <td><font class="key">Baseline:</font> <font class="val" id="baseline"></font></td>
+            <td><font class="key">RA:</font> <font class="val" id="ra"></font></td>
+            <td><font class="key">Dec:</font> <font class="val" id="dec"></font></td>
+            <td>
+                <a target="_blank" id="simbadLink">Search in SIMBAD</a><br/>
+                <a target="_blank" id="sdssLink">Search in SDSS</a>
+            </td>
+        </tr>
+    </table>
+    <br/>
+    
+    <table width="100%">
+        <tr>
+            <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
+            <td>SDSS Image<br/>
+                <img id="sdssImage" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
+                <br/><br/>
+                PTF Image<br/>
                 
-            </tr>
-            <tr>
-                <td></td>
-                <td align="center"></td>
-            </tr>
-        </table>
-        <!--<input id="reset" type="button" value="Reset axes" />-->
+            </td>
+            
+        </tr>
+        <tr>
+            <td></td>
+            <td align="center"></td>
+        </tr>
+    </table>
+    <!--<input id="reset" type="button" value="Reset axes" />-->
         
-    {% endif %}
     <!--<pre><span class=ig>some code!</span></pre>-->
 
 <!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"

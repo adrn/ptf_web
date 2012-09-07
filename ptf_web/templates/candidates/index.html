@@ -3,7 +3,10 @@
 {% block head %}
     {{ super() }}
     
-    <script type="text/javascript">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='js/datatables/css/jquery.dataTables.css') }}">
+    <script src="{{ url_for('static', filename='js/datatables/js/jquery.dataTables.min.js') }}"></script>
+    
+    <!--<script type="text/javascript">
         $(document).ready(function() {
             $("tr").click(function(){
                 window.location = $(this).attr("url");
@@ -32,7 +35,8 @@
             );
             
         });
-    </script>
+    </script>-->
+    
 {% endblock %}
 
 {% block body %}
@@ -40,30 +44,104 @@
     <h2>Candidates</h2>
     <hr width="100px" color="#ccc" size="1px" />
     <br/>
-    <table id="candidateList" cellspacing=0>
+    
+    <table id="candidateList" cellspacing="0">
         <thead>
-            <th>Source ID</th>
             <th>Field ID</th>
             <th>CCD ID</th>
-            <th>RA</th>
+            <th>Source ID</th>
+            <th>&Delta;&chi;<sup>2</sup></th>
+            <!--<th>RA</th>
             <th>Dec</th>
-            <th>Num. of R-band<Br/>Observations</th>
+            <th>Num. of R-band<Br/>Observations</th>-->
         </thead>
+        
         <tbody>
-            {% set row_class = cycler('odd', 'even') %}
-            {% for candidate in candidates %}
-                <tr class="{{ row_class.next() }}" url="/candidates/plot?matchedSourceID={{ candidate['matchedSourceID'] }}">
-                    <td>{{ candidate["matchedSourceID"] }}</td>
-                    <td>{{ candidate["field_id"] }}</td>
-                    <td>{{ candidate["ccd_id"] }}</td>
-                    <td>{{ "{:.5f}".format(candidate["ra"]) }}</td>
-                    <td>{{ "{:.5f}".format(candidate["dec"]) }}</td>
-                    <td>{{ candidate["num_obs"] }}</td>
-                </tr>
-            {% endfor %}
+            
         </tbody>
+        
+        <tfoot>
+            <tr>
+                <th><input type="text" name="search_field_id" value="Search fields" class="search_init" /></th>
+                <th><input type="text" name="search_ccd_id" value="Search ccds" class="search_init" /></th>
+                <th><input type="text" name="search_source_id" value="Search sources" class="search_init" /></th>
+                <th><input type="text" name="search_delta_chi_sq" value="Search " class="search_init" /></th>
+            </tr>
+        </tfoot>        
     </table>
+
     <!--<pre><span class=ig>some code!</span></pre>-->
+    
+    <script type="text/javascript">        
+        var asInitVals = new Array();
+        var dataTable;
+        
+        $(document).ready(function() {
+            var ajax_source = "/json/candidate_list";
+            
+            dataTable = $('#candidateList').dataTable( {
+                "bProcessing": true,
+                "sAjaxSource": '/json/candidate_list',
+                "aoColumns" : [
+                    { "mData" : "field_id" },
+                    { "mData" : "ccd_id" },
+                    { "mData" : "source_id" },
+                    { "mData" : "delta_chi_squared" }
+                ],
+                "bPaginate" : false,
+                "bSort" : false,
+                "oLanguage": {
+                    "sSearch": "Search all columns:"
+                },
+                "fnDrawCallback": function () {
+                    $("#candidateList tbody tr").click( function( e ) {                        
+                        var field = $(this).children()[0].innerText;
+                        var ccd_id = $(this).children()[1].innerText;
+                        var source_id = $(this).children()[2].innerText;
+                        
+                        var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
+                        //window.location = url;
+                        
+                        window.open(
+                          url,
+                          '_blank' // <- This is what makes it open in a new window.
+                        );
+                        
+                    });
+                }
+            } );
+             
+            $("tfoot input").keyup( function () {
+                /* Filter on the column (the index) of this element */
+                dataTable.fnFilter( this.value, $("tfoot input").index(this) );
+            } );
+             
+            /*
+             * Support functions to provide a little bit of 'user friendlyness' to the textboxes in 
+             * the footer
+             */
+            $("tfoot input").each( function (i) {
+                asInitVals[i] = this.value;
+            } );
+             
+            $("tfoot input").focus( function () {
+                if ( this.className == "search_init" )
+                {
+                    this.className = "";
+                    this.value = "";
+                }
+            } );
+             
+            $("tfoot input").blur( function (i) {
+                if ( this.value == "" )
+                {
+                    this.className = "search_init";
+                    this.value = asInitVals[$("tfoot input").index(this)];
+                }
+            } );
+            
+        } );
+    </script>
 
 <!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"
   src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>-->

@@ -10,7 +10,7 @@ import numpy as np
 
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, lc_db_session, LightCurve
+#from ptf_web.database import db_session, User, lc_db_session, LightCurve
 
 mod = Blueprint('sandbox', __name__)
 

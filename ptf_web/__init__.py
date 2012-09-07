@@ -1,3 +1,4 @@
+import os
 from flask import Flask, session, g, render_template
 from flaskext.openid import OpenID
 
@@ -6,6 +7,13 @@ from flaskext.openid import OpenID
 # Define application and configuration script
 app = Flask(__name__)
 app.config.from_object("wwwconfig")
+
+# Get PTF kanaloa login
+with open(os.path.join(app.config['BASEDIR'],"ptf_credentials")) as f:
+    userline, passwordline = f.readlines()
+
+ptf_user = userline.split()[1]
+ptf_password = passwordline.split()[1]
 
 # Initialize OpenID utilities
 from ptf_web.openid_auth import DatabaseOpenIDStore

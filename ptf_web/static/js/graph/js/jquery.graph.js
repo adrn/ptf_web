@@ -1098,7 +1098,8 @@
 
 			if(this.data[s].points.show){
 				this.canvas.ctx.fillStyle = (this.data[s].color ? parseColour(this.data[s].color) : '#df0000');
-				this.canvas.ctx.lineWidth = (0.8);
+				//this.canvas.ctx.lineWidth = (1.0);
+			        //this.canvas.ctx.globalAlpha = 1.0;
 				for(var i = 0; i < this.data[s].x.length ; i++){
 					if(this.data[s].x[i] && this.data[s].y[i] && this.data[s].data[i].x >= this.x.min && this.data[s].data[i].x <= this.x.max && this.data[s].data[i].y >= this.y.min && this.data[s].data[i].y <= this.y.max){
 						if(this.data[s].y[i] < this.chart.top+this.chart.height){
@@ -1117,11 +1118,15 @@
 								}
 								
 								if(hi && lo){
+								        this.canvas.ctx.lineWidth = (0.7);
+								        this.canvas.ctx.globalAlpha = 0.4;
 									this.canvas.ctx.beginPath();
 									this.canvas.ctx.moveTo(this.data[s].x[i],lo);
 									this.canvas.ctx.lineTo(this.data[s].x[i],hi);
 									this.canvas.ctx.stroke();
 									this.canvas.ctx.closePath();
+								        this.canvas.ctx.lineWidth = (3.0);
+								        this.canvas.ctx.globalAlpha = 1.0;
 								}
 							}
 						}

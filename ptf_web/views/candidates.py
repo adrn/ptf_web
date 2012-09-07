@@ -14,128 +14,80 @@ import Image
 
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, lc_db_session, LightCurve
+from ptf_web.database import db_session, User, light_curve_collection
 
 mod = Blueprint('candidates', __name__)
 
-def get_candidates(sort_key, reverse):
-    candidates = []
-    for light_curve in lc_db_session.query(LightCurve).all():
-         candidates.append(light_curve.to_json())
+@mod.route('/json/candidate_list', methods=["GET"])
+@requires_login
+def candidate_list():
+    """ Load candidate light curves from MongoDB """
     
-    try:
-        candidates = sorted(candidates, key=lambda x: x[sort_key], reverse=reverse)
-    except KeyError:
-        flash(u"Invalid table sort key.")
+    search = {}
     
-    return candidates
-
-def get_key(key, sort_key, reverse):
-    vals = []
+    # Default is to sort by CCD, Source ID
+    if request.args.has_key("field_id"):
+        field_ids = [int(x) for x in request.args.getlist("field_id")]
+        search["field_id"] = {"$in" : field_ids}
     
-    if key == sort_key:
-        for light_curve in lc_db_session.query(LightCurve).all():
-             vals.append({key : getattr(light_curve, key)})
+    # Default is to return all, e.g. num=0
+    num = request.args.get("num", 0)
+    
+    # Default is to sort by CCD, Source ID
+    if request.args.has_key("sort"):
+        sort = [(x,1) for x in request.args.getlist("sort")]
     else:
-        for light_curve in lc_db_session.query(LightCurve).all():
-             vals.append({key : getattr(light_curve, key), sort_key : getattr(light_curve, sort_key)})
+        sort = [("ccd_id",1), ("source_id",1)]
     
-    vals = [x[key] for x in sorted(vals, key=lambda x: x[sort_key], reverse=reverse)]
+    # Default is to get Field ID, CCD ID, Source ID
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "delta_chi_squared", "ra", "dec"])
     
-    return vals
+    raw_candidates = light_curve_collection.find(search, fields=mongo_fields).limit(int(num)).sort(sort)
+    
+    candidates = []
+    for c in list(raw_candidates):
+        #candidates.append([c["field_id"],c["ccd_id"],c["source_id"]])
+        
+        if not c.has_key("delta_chi_squared"):
+            c["delta_chi_squared"] = ""
+            
+        candidates.append(dict([(key,val) for key,val in c.items() if key != "_id"]))
+    
+    return jsonify(aaData=list(candidates))
+
+@mod.route('/json/candidate_data', methods=["GET"])
+@requires_login
+def candidate_data():
+    """ Load candidate light curves from MongoDB """
+    
+    search = {}
+    search["field_id"] = int(request.args["field_id"])
+    search["ccd_id"] = int(request.args["ccd_id"])
+    search["source_id"] = int(request.args["source_id"])
+    
+    raw_candidate = light_curve_collection.find_one(search)
+    candidate = dict([(key,val) for key,val in raw_candidate.items() if key != "_id"])
+    
+    return jsonify(light_curve=candidate)
 
 @mod.route('/candidates', methods=["GET"])
 @requires_login
 def index():
-    
-    try:
-        sort_key = request.args["sort_key"]
-    except KeyError:
-        sort_key = "matchedSourceID"
-    
-    try:
-        rev = request.args["reverse"]
-        reverse = True
-    except KeyError:
-        reverse = False
-    
-    candidates = get_candidates(sort_key, reverse)
-    
-    session["sort_key"] = sort_key
-    session["reverse"] = reverse
-    session.modified = True
-    
-    return render_template('candidates/index.html', candidates=candidates)
+    return render_template('candidates/index.html')
 
 @mod.route('/candidates/plot', methods=["GET"])
 @requires_login
 def plot():
-    if not request.args.has_key("matchedSourceID"):
+    if not request.args.has_key("source_id") or not request.args.has_key("field_id") or not request.args.has_key("ccd_id"):
         abort(404)
     
-    try:
-        source_id = int(request.args["matchedSourceID"])
-    except:
-        light_curve = None
-        flash(u"Invalid Source ID")
+    source_id = int(request.args["source_id"])
+    field_id = int(request.args["field_id"])
+    ccd_id = int(request.args["ccd_id"])
     
-    try:
-        light_curve = lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == int(request.args["matchedSourceID"])).one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        light_curve = None
-        flash(u"Source ID not in database.")
-    
-    if session.has_key("sort_key"):
-        sort_key = session["sort_key"]
-    else:
-        sort_key = "matchedSourceID"
-    
-    if session.has_key("reverse"):
-        reverse = session["reverse"]
-    else:
-        reverse = False
-        
-    source_ids = get_key("matchedSourceID", sort_key, reverse)
-    this_index = source_ids.index(source_id)
-    
-    if this_index == 0:
-        previous_id = None
-    else:
-        previous_id = source_ids[this_index-1]
-        
-    if this_index == len(source_ids)-1:
-        next_id = None
-    else:
-        next_id = source_ids[this_index+1]
-    
-    return render_template('candidates/plot.html', light_curve=light_curve, previous_id=previous_id, next_id=next_id)
+    return render_template('candidates/plot.html', field_id=field_id, ccd_id=ccd_id, source_id=source_id)
 
-@mod.route('/candidates/data', methods=["GET"])
-@requires_login
-def data():
-    if not request.args.has_key("matchedSourceID"):
-        abort(404)
-        
-    try:
-        source_id = int(request.args["matchedSourceID"])
-    except:
-        light_curve = None
-        flash(u"Invalid Source ID")
-    
-    try:
-        light_curve = lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == int(request.args["matchedSourceID"])).one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        light_curve = None
-        flash(u"Source ID not in database.")
-    
-    lc_dict = light_curve.to_json()
-    lc_data = light_curve.data
-    lc_dict["mjd"] = list(lc_data["mjd"].astype(float))
-    lc_dict["mag"] = list(lc_data["mag"].astype(float))
-    lc_dict["error"] = list(lc_data["error"].astype(float))
-    
-    return jsonify(light_curve=lc_dict)
-
+"""
 @mod.route('/candidates/ptfimage', methods=["GET"])
 @requires_login
 def ptfimage():
@@ -212,3 +164,4 @@ def ptfimage():
     
     #print 'Content-Type:image/png\n'
     return send_file(output, mimetype="image/png")
+"""

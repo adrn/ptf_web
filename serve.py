@@ -14,14 +14,15 @@
     
 """
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 from ptf_web import app
 
 if __name__ == "__main__":
-    parser = OptionParser("Run APW's PTF website")
-    parser.add_option("-d", "--debug", dest="debug", action="store_true", default=False,
+    parser = ArgumentParser("Run APW's PTF website")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False,
                       help="Print debug messages, be chatty!")
     
-    (options, args) = parser.parse_args()
+    args = parser.parse_args()
     
-    app.run(debug=options.debug, host="0.0.0.0")
+    app.run(debug=args.debug, host="0.0.0.0")
+    

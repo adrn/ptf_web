@@ -7,6 +7,7 @@ CSV_PATH = os.path.join(ptf_basedir, "data/js/")
 
 DEBUG = False
 SERVER_NAME = "deimos.astro.columbia.edu:5000"
+#SERVER_NAME = "128.59.170.28:5000"
 SESSION_COOKIE_NAME = "deimos"
 
 SECRET_KEY = '/3yXR~XHA0Zr98jLWX/,?RTH!jmN]'
