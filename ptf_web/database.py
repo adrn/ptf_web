@@ -87,6 +87,7 @@ ptf = connection.ptf # the database
 ptf.authenticate(config["www_db_user"], config["www_db_password"])
 light_curve_collection = ptf.light_curves
 candidate_status_collection = ptf.candidate_status
+table_state_collection = ptf.table_state
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

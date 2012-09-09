@@ -1,5 +1,7 @@
 # Standard library
 import os
+import json
+import re
     
 from flask import Blueprint, render_template, session, redirect, url_for, \
      request, flash, g, jsonify, abort, send_file
@@ -12,9 +14,16 @@ from ptf.db.mongodb import update_candidate_status
 
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, light_curve_collection, candidate_status_collection
+from ptf_web.database import db_session, User, light_curve_collection, candidate_status_collection, table_state_collection
 
 mod = Blueprint('candidates', __name__)
+
+def str_encode_field_ccd_source(field_id, ccd_id, source_id):
+    return "f{}c{}s{}".format(field_id, ccd_id, source_id)
+
+def str_decode_field_ccd_source(string):
+    pattr = re.compile("f([0-9]+)c([0-9]+)s([0-9]+)")
+    return map(int, pattr.search(string).groups())
 
 @mod.route('/json/candidate_list', methods=["GET"])
 @requires_login
@@ -116,81 +125,60 @@ def plot():
     
     return render_template('candidates/plot.html', field_id=field_id, ccd_id=ccd_id, source_id=source_id)
 
-"""
-@mod.route('/candidates/ptfimage', methods=["GET"])
+@mod.route('/mongo/save_table_state', methods=["POST"])
 @requires_login
-def ptfimage():
-    if not request.args.has_key("matchedSourceID"):
-        abort(404)
+def save_table_state():
+    """ Save the current state of the table for next / previous buttons """
     
-    try:
-        light_curve = lc_db_session.query(LightCurve).filter(LightCurve.matchedSourceID == int(request.args["matchedSourceID"])).one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        light_curve = None
-        flash(u"Source ID not in database.")
-        abort(404)
+    user_id = g.user.id
     
-    with open(os.path.join(app.config['BASEDIR'],"ptf_credentials")) as f:
-        userline, passwordline = f.readlines()
+    json_data = request.json
     
-    user = userline.split()[1]
-    password = passwordline.split()[1]
-    
-    try:
-        mjd = float(request.args["mjd"])
-    except:
-        mjd = light_curve.data["mjd"][0]
-    
-    ra = light_curve.ra
-    dec = light_curve.dec
-    
-    # http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS=12.5432151118,40.1539468896&size=0.005&columns=pfilename&where=obsmjd=55398.33127
-    url = "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={0},{1}&SIZE={2}&columns=pfilename&where=obsmjd={3:.5f}".format(ra, dec, 10./3600., mjd)
-    
-    http_request = urllib2.Request(url)
-    base64string = base64.encodestring("%s:%s" % (user, password)).replace('\n', '')
-    http_request.add_header("Authorization", "Basic %s" % base64string)
-    file = StringIO.StringIO(urllib2.urlopen(http_request).read())
-    filename = np.genfromtxt(file, skiprows=4, usecols=[3], dtype=str)
-    
-    fits_image_url = os.path.join(app.config['IPAC_DATA_URL'], str(filename))
-    
-    http_request = urllib2.Request(fits_image_url + "?center={0},{1}&size=50px".format(ra,dec))
-    base64string = base64.encodestring('%s:%s' % (user, password)).replace('\n', '')
-    http_request.add_header("Authorization", "Basic %s" % base64string)
-    
-    try:
-        f = StringIO.StringIO(urllib2.urlopen(http_request).read())
-    except urllib2.HTTPError:
-        flash("Error downloading image!")
-        return 
-    
-    try:
-        gz = gzip.GzipFile(fileobj=f, mode="rb")
-        gz.seek(0)
+    table_state_list = []
+    for ii in range(len(json_data["field_id"])):
+        field_id = json_data["field_id"][ii]
+        ccd_id = json_data["ccd_id"][ii]
+        source_id = json_data["source_id"][ii]
         
-        fitsFile = StringIO.StringIO(gz.read())
-    except IOError:
-        fitsFile = f
+        table_state_list.append(str_encode_field_ccd_source(field_id, ccd_id, source_id))
     
-    fitsFile.seek(0)
+    # See if there is currently a state stored for this user
+    table_state = table_state_collection.find_one({"user_id" : user_id})
     
-    hdulist = pf.open(fitsFile, mode="readonly")
+    if table_state == None:
+        table_state = dict()
+        table_state["user_id"] = user_id
+        table_state["state"] = table_state_list
+        table_state_collection.insert(table_state, safe=True)
+    else:
+        table_state_collection.update({"user_id" : user_id}, {"$set" : {"state" : table_state_list}})
     
-    image_data = hdulist[0].data
-    scaled_image_data = (255*(image_data - image_data.min()) / (image_data.max() - image_data.min())).astype(np.uint8)
+    return ""
+
+@mod.route('/mongo/previous_next_light_curve', methods=["GET"])
+@requires_login
+def previous_next_light_curve():
+    """ Load the current state of the table for next / previous buttons """
     
-    image = Image.fromarray(scaled_image_data)
+    if not request.args.has_key("source_id") or not request.args.has_key("field_id") or not request.args.has_key("ccd_id"):
+        abort(404)
     
-    output = StringIO.StringIO()
-    image.save(output, format="png")
-    #image.save(open("test.png", "w"), format="png")
+    field_id = int(request.args["field_id"])
+    ccd_id = int(request.args["ccd_id"])
+    source_id = int(request.args["source_id"])
     
-    #contents = output.getvalue()
-    #output.close()
+    user_id = g.user.id
+    table_state = table_state_collection.find_one({"user_id" : user_id})
     
-    output.seek(0)
+    if table_state == None:
+        return jsonify({})
+    else:
+        idx = table_state["state"].index(str_encode_field_ccd_source(field_id, ccd_id, source_id))
+        if idx > len(table_state["state"])-1:
+            next_idx = -1
+        else:
+            next_idx = idx+1
+        
+        return jsonify(previous=str_decode_field_ccd_source(table_state["state"][idx-1]), 
+                       next=str_decode_field_ccd_source(table_state["state"][next_idx]))
     
-    #print 'Content-Type:image/png\n'
-    return send_file(output, mimetype="image/png")
-"""

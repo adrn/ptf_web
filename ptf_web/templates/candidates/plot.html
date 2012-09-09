@@ -28,6 +28,14 @@
         
         /* -------------------------------------------------- */
         
+        function setNextPreviousLinks(data) {
+            var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]),
+                next_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.next[0], data.next[1], data.next[2]);
+            
+            $("#previousLightCurve").attr("href", previous_url);
+            $("#nextLightCurve").attr("href", next_url);
+        }
+        
         function dataReceived(data) {
             var plot_data = [];
             for (ii in data.light_curve.mjd) {
@@ -106,6 +114,14 @@
                 dataType: "json",
                 success: dataReceived
             });
+            
+            $.ajax({
+                type: "GET",
+                url: "/mongo/previous_next_light_curve?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: setNextPreviousLinks
+            });
         });
     </script>
                
@@ -140,6 +156,8 @@
             <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
             <td align="center">
                 
+                <a id="previousLightCurve">Previous</a> | <a id="nextLightCurve">Next</a>
+                <br/><br/>
                 <form method="get">
                     <input type="hidden" name="field_id" value="{{ field_id }}" />
                     <input type="hidden" name="ccd_id" value="{{ ccd_id }}" />

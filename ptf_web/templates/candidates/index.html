@@ -5,6 +5,7 @@
     
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='js/datatables/css/jquery.dataTables.css') }}">
     <script src="{{ url_for('static', filename='js/datatables/js/jquery.dataTables.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/datatables/js/dataTables.fnGetHiddenNodes.js') }}"></script>
     
     <!--<script type="text/javascript">
         $(document).ready(function() {
@@ -92,12 +93,15 @@
         var asInitVals = new Array();
         var dataTable;
         
+        var alreadyLinked = false;
+        
         $(document).ready(function() {
             
             var ajax_source = "/json/candidate_list";
             
             dataTable = $('#candidateList').dataTable( {
                 "bProcessing": true,
+                "bStateSave": true,
                 "sAjaxSource": '/json/candidate_list',
                 "aoColumns" : [
                     { "mData" : "field_id" },
@@ -106,37 +110,96 @@
                     { "mData" : "delta_chi_squared" },
                     { "mData" : "status" }
                 ],
+                "aoColumnDefs": [
+                    {
+                        "fnRender": function ( oObj ) {
+                            var s = oObj.aData.delta_chi_squared; // current value
+                            return parseInt(s).toString();
+                        },
+                        "aTargets": [ 3 ]
+                    }
+                ],
                 "bPaginate" : false,
-                "bSort" : false,
+                "bSort" : true,
                 "oLanguage": {
                     "sSearch": "Search all columns:"
                 },
-                "fnDrawCallback": function () {                    
-                    $("#candidateList tbody tr").click( function( e ) {                        
-                        var field = $(this).children()[0].innerText;
-                        var ccd_id = $(this).children()[1].innerText;
-                        var source_id = $(this).children()[2].innerText;
-                        
-                        var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
-                        //window.location = url;
-                        
-                        window.open(
-                          url,
-                          '_blank' // <- This is what makes it open in a new window.
-                        );
-                        
-                    });
+                "fnStateSave": function (oSettings, oData) {
+                    // Send an Ajax request to the server with the state object
+                    /*$.ajax( {
+                        "url": "/mongo/save_table_state",
+                        "data": oData,
+                        "dataType": "json",
+                        "method": "POST",
+                        "success": function () {
+                        }
+                    } );*/
+                },
+                "fnDrawCallback": function () {
                     
-                    $("#candidateList tbody tr").mouseover( function(e) {
-                        $(this).attr("oldClass", $(this).attr("class"));
-                        $(this).attr("class", "mouseover");
-                        $(this).css("cursor", "pointer");
-                    });
+                    if (alreadyLinked == true) {
+                        var visibleRows = dataTable.fnGetVisibleNodes();
+                        
+                        var data = new Array();
+                        var field_ids = new Array();
+                        var ccd_ids = new Array();
+                        var source_ids = new Array();
+                        
+                        for (var ii=0; ii < visibleRows.length; ii++) {
+                            var field_id = visibleRows[ii].children[0].innerText,
+                                ccd_id = visibleRows[ii].children[1].innerText,
+                                source_id = visibleRows[ii].children[2].innerText;
+                            //console.log("field " + field_id + "  ccd " + ccd_id + "  source_id " + source_id);
+                            field_ids.push(field_id);
+                            ccd_ids.push(ccd_id);
+                            source_ids.push(source_id);
+                            //data.push([field_id, ccd_id, source_id]);
+                        }
+                        //console.log(field_ids.length);
+                        $.ajax( {
+                            "url": "/mongo/save_table_state",
+                            "data": JSON.stringify({"field_id" : field_ids, "ccd_id" : ccd_ids, "source_id" : source_ids}),
+                            "dataType": "json",
+                            "contentType" : "application/json",
+                            "type": "POST",
+                            "success": function () {
+                            }
+                        } );
+                    }
                     
-                    $("#candidateList tbody tr").mouseout( function(e) {
-                        $(this).attr("class", $(this).attr("oldClass"));
-                        $(this).css("cursor", "default");
-                    });
+                    if (alreadyLinked == false) {
+                            
+                        $("#candidateList tbody tr").click( function( e ) {                        
+                            var field = $(this).children()[0].innerText;
+                            var ccd_id = $(this).children()[1].innerText;
+                            var source_id = $(this).children()[2].innerText;
+                            
+                            var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
+                            //window.location = url;
+                            
+                            window.open(
+                              url,
+                              '_blank' // <- This is what makes it open in a new window.
+                            );
+                            
+                        });
+                        
+                        $("#candidateList tbody tr").mouseover( function(e) {
+                            $(this).attr("oldClass", $(this).attr("class"));
+                            $(this).attr("class", "mouseover");
+                            $(this).css("cursor", "pointer");
+                        });
+                        
+                        $("#candidateList tbody tr").mouseout( function(e) {
+                            $(this).attr("class", $(this).attr("oldClass"));
+                            $(this).css("cursor", "default");
+                        });
+                        
+                        if ($("#candidateList tbody tr").length > 1) {
+                            alreadyLinked = true;
+                        }
+                    }
+                    
                 }
             } );
             
