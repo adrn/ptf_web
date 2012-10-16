@@ -8,6 +8,11 @@
     
     <script type="text/javascript">
         /* Misc. Useful functions */
+        function roundNumber(num, dec) {
+            var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
+            return result;
+        }
+        
         array_max = function( array ){
             return Math.max.apply( Math, array );
         };
@@ -26,7 +31,15 @@
             return s;
         };
         
+        function log10(val) {
+            return Math.log(val) / Math.log(10);
+        }
+        
         /* -------------------------------------------------- */
+        
+        // some globals for plotting
+        var PLOT_DATA_POINTS, 
+            graph;
         
         function setNextPreviousLinks(data) {
             var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]),
@@ -36,7 +49,23 @@
             $("#nextLightCurve").attr("href", next_url);
         }
         
-        function dataReceived(data) {
+        function showPTFImage(thing) {
+            var mjd = $(thing).attr("mjd");
+            
+            show_ptf_loading();
+            
+            // Set PTF image link
+            var ptfImageURL = "/ptfimage?field_id={{ light_curve['field_id'] }}&ccd_id={{ light_curve['ccd_id'] }}&source_id={{ light_curve['source_id'] }}&mjd=" + mjd;
+            $("#ptfImage").attr("src", ptfImageURL);
+        }
+        
+        function draw_plot(data, show_model) {
+            if (show_model == undefined) {
+                show_model = false;
+            }
+            
+            var dataset = [];
+            
             var plot_data = [];
             for (ii in data.light_curve.mjd) {
                 plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : -data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
@@ -48,15 +77,56 @@
                 yaxis: { label: 'R (mag)' }
             };
             
+            dataset.push({data : plot_data,
+                          color: "#1E67BA",
+                          points: { show: true, radius: 3 },
+                          lines: { show: false, width: 2 },
+                          hoverable: true, 
+                          clickable: true,
+                          hover : {
+                            after : "<br/><a name='showPTFImage' mjd={{ '{{ x }}' }} onClick='showPTFImage(this);'>Show Image</a>"
+                          }
+                         });
+            
+            if (show_model == true) {
+                // Compute model line
+                var t0 = parseFloat("{{ light_curve['microlensing_fit']['t0'] }}"),
+                    u0 = parseFloat("{{ light_curve['microlensing_fit']['u0'] }}"),
+                    tE = parseFloat("{{ light_curve['microlensing_fit']['tE'] }}"),
+                    m0 = parseFloat("{{ light_curve['microlensing_fit']['m0'] }}");
+            
+                function model(t) {
+                    u = Math.sqrt(u0*u0 + Math.pow( ((t-t0)/tE), 2));
+                    Au = (u*u + 2) / (u*Math.sqrt(u*u + 4));
+                    y = m0 - 2.5*log10(Au);
+                    return y;
+                }
+                
+                var mjd_min = array_min(data.light_curve.mjd),
+                    mjd_max = array_max(data.light_curve.mjd),
+                    num_points = 500;
+                
+                var delta = (mjd_max - mjd_min) / num_points;
+                var model_data = new Array();
+                for (var mjd=mjd_min; mjd <= (mjd_max+delta); mjd += delta) {
+                    model_data.push({"x" : mjd, "y" : -model(mjd)});
+                }
+                
+                dataset.push({data : model_data,
+                              color: "#ff0000",
+                              points: { show: false, radius: 1 },
+                              lines: { show: true, width: 1 }
+                             });
+            } else {
+                dataset = dataset[0];
+            }
+            
             // Set data-dependent fields
             var baseline = array_max(data.light_curve.mjd) - array_min(data.light_curve.mjd);
-            $("#numObservations").text("" + plot_data.length);
             $("#baseline").text("" + parseInt(baseline) + " days");
-            $("#ra").text("" + data.light_curve.ra.toFixed(5));
-            $("#dec").text("" + data.light_curve.dec.toFixed(5));
             
             // Set SDSS link url
-            var sdssURL = "http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={0}&dec={1}&radius=5&format=csv&topnum=20".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
+            var sdssURL = "http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={0}&dec={1}&radius=0.15&format=html&topnum=20".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssLink").attr("href", sdssURL);
             
             // Set SIMBAD link url
@@ -67,62 +137,108 @@
             var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=40&height=40".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssImage").attr("src", sdssImageURL);
             
-            // Set PTF image link
-            var ptfImageURL = "/ptfimage?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}";
-            $("#ptfImage").attr("src", ptfImageURL);
-            
-            // Set status text
-            var status = data.light_curve.status;
-            var statusColor;
-            
-            if (status == "Galaxy") {
-                statusColor = "rgba(44, 123, 182, 0.5)";
-            } else if (status == "Boring") {
-               statusColor = "rgba(171, 217, 233, 0.75)";
-            } else if (status == "Interesting") {
-                statusColor = "rgba(253, 174, 97, 0.75)";
-            } else if (status == "Candidate") {
-                statusColor = "rgba(215, 25, 28, 0.5)";
-            } else {
-                $("#statusBanner").css("display", "none");
-            }
-            
-            $("#statusBanner").text("" + data.light_curve.status);
-            $("#statusBanner").css("background-color", statusColor);
-            
             // Setup the graph
-            var graph = $.graph('placeholder', {
-                data: plot_data,
-                color: "#1E67BA",
-                points: { show: true, radius: 3 },
-                lines: { show: false, width: 2 },
-                hoverable: true, 
-                clickable: true
-            }, options);
-            
+            graph = $.graph('placeholder', dataset, options);
+        
         }
         
-        function parsePTFImageQuery(textData) {
-            alert(textData);   
+        function dataReceived(data) {
+            // TODO: Load preference from user's configuration
+            PLOT_DATA_POINTS = data;
+            draw_plot(PLOT_DATA_POINTS, true);
         }
         
         $(document).ready(function() {
+            // Get light curve data for plot
             $.ajax({
                 type: "GET",
-                url: "/json/candidate_data?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}",
+                url: "/json/candidate_data?field_id={{ light_curve['field_id'] }}&ccd_id={{ light_curve['ccd_id'] }}&source_id={{ light_curve['source_id'] }}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: dataReceived
             });
             
+            // Set the previous and next link buttons
             $.ajax({
                 type: "GET",
-                url: "/mongo/previous_next_light_curve?field_id={{ field_id }}&ccd_id={{ ccd_id }}&source_id={{ source_id }}",
+                url: "/mongo/previous_next_light_curve?field_id={{ light_curve['field_id'] }}&ccd_id={{ light_curve['ccd_id'] }}&source_id={{ light_curve['source_id'] }}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: setNextPreviousLinks
             });
+            
+            var simbad_url = "/search/simbad?ra={{ '{:.5f}'.format(light_curve['ra']) }}&dec={{ '{:.5f}'.format(light_curve['dec']) }}";
+            
+            // Load information from SIMBAD through my cgi script
+            $.ajax({
+                type: "GET",
+                url: simbad_url,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (data.hasOwnProperty()) {
+                        $("#simbad_data").text("yes");
+                    } else {
+                        $("#simbad_data").text("no");
+                    }
+                }
+            });
+            
+            // Get SDSS data
+            var sdss_url = "/search/sdss?ra={{ '{:.5f}'.format(light_curve['ra']) }}&dec={{ '{:.5f}'.format(light_curve['dec']) }}";
+            $.ajax({
+                type: "GET",
+                url: sdss_url,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    if (Object.keys(data).length == 0) {
+                        $('#sdss_colors').append("none");
+                        return;
+                    }
+                    
+                    var filters = ['u','g','r','i','z'],
+                        psf_mags = {};
+                    for(var i = 0; i < 5; i++) {
+                        psf_mags[filters[i]] = roundNumber(data[filters[i]+'Psf'][0],3);
+                        //$('#sdss_colors').append(filters[i]+"': " + roundNumber(data[filters[i]+'Mod'][0],2) + " &pm; " + roundNumber(data[filters[i]+'Mod'][1],2) + "<br>");
+                    }
+                    
+                    $('#sdss_colors').append("<font class='key'>Type:</font> <font class='val'>" + (data.type == 6 ? 'Star' : (data.type==3?'Galaxy' : 'Unknown'))+'</font><br>');
+                    $('#sdss_colors').append("<font class='key'>Dist:</font> <font class='val'>" + roundNumber(data.dist*3600, 2) + '"</font>');
+                    
+                    if (( (psf_mags.g - psf_mags.r) > -0.2) && ( (psf_mags.g - psf_mags.r) < 0.9) && 
+                       ( (psf_mags.r - psf_mags.i) > -0.2) && ( (psf_mags.r - psf_mags.i) < 0.6) && 
+                       ( (psf_mags.i - psf_mags.z) > -0.15) && ( (psf_mags.i - psf_mags.z) < 0.5) && 
+                       ( psf_mags.i > 17) && ( psf_mags.i < 19.1)) {
+                        $('#sdss_qso').append("<font class='val' style='color: red'>QSO</font>");
+                    }
+                }
+            });
+            
         });
+        
+        function hide_ptf_loading() {
+            $("#ptfImageText").css("display", "none");
+            $("#ptfLoader").css("display", "none");
+            $("#ptfImage").css("display", "block");
+        }
+        
+        function show_ptf_loading() {
+            $("#ptfLoader").css("display", "block");
+            $("#ptfImage").css("display", "none");        
+        }
+        
+        function toggleModel() {
+            console.log("Checkbox: " + $("#show_model").is(":checked"));
+            
+            if ($("#show_model").is(":checked")) {
+                draw_plot(PLOT_DATA_POINTS, true);
+            } else {
+                draw_plot(PLOT_DATA_POINTS, false);
+            }
+        }
+        
     </script>
                
     
@@ -131,22 +247,28 @@
 {% block body %}
     
     <table width="1400px" class="info">
-        <tr class="status">
+        <!--<tr class="status">
             <td colspan="8" id="statusBanner">
             </td>
+        </tr>-->
+        <tr class="titles">
+            <td><font class="key">Field ID:</font> <font class="val">{{light_curve['field_id']}}</font></td>
+            <td><font class="key">CCD ID:</font> <font class="val">{{light_curve['ccd_id']}}</font></td>
+            <td><font class="key">Source ID:</font> <font class="val">{{light_curve['source_id']}}</font></td>
+            <td><font class="key">Num. Observations:</font> <font class="val" id="numObservations">{{ light_curve['mjd']|length }}</font></td>
+            <td><font class="key">Baseline:</font> <font class="val" id="baseline"></font></td>
+            <td><font class="key">RA/Dec:</font><br/><font class="val" id="ra">{{ "{:.5f}".format(light_curve['ra']) }}</font><br/><font class="val" id="dec">{{ "{:.5f}".format(light_curve['dec']) }}</font></td>
+            <td><font class="key"><a target="_blank" id="sdssLink">SDSS info:</a></font><p id="sdss_colors" class="val"></p></td>
+            <td><font class="key"><a target="_blank" id="simbadLink">Simbad data:</a></font><p id="simbad_data" class="val"></p></td>
         </tr>
         <tr class="titles">
-            <td><font class="key">Field ID:</font> <font class="val">{{field_id}}</font></td>
-            <td><font class="key">CCD ID:</font> <font class="val">{{ccd_id}}</font></td>
-            <td><font class="key">Source ID:</font> <font class="val">{{source_id}}</font></td>
-            <td><font class="key">Num. Observations:</font> <font class="val" id="numObservations"></font></td>
-            <td><font class="key">Baseline:</font> <font class="val" id="baseline"></font></td>
-            <td><font class="key">RA:</font> <font class="val" id="ra"></font></td>
-            <td><font class="key">Dec:</font> <font class="val" id="dec"></font></td>
-            <td>
-                <a target="_blank" id="simbadLink">Search in SIMBAD</a><br/>
-                <a target="_blank" id="sdssLink">Search in SDSS</a>
-            </td>
+            <td><font class="key">t<sub>0</sub>:</font> <font class="val" id="t0">{{ "{:.1f}".format(light_curve['microlensing_fit']['t0']) }}</font></td>
+            <td><font class="key">t<sub>E</sub>:</font> <font class="val" id="tE">{{ "{:.2f}".format(light_curve['microlensing_fit']['tE']) }}</font></td>
+            <td><font class="key">u<sub>0</sub>:</font> <font class="val" id="u0">{{ "{:.3f}".format(light_curve['microlensing_fit']['u0']) }}</font></td>
+            <td><font class="key">m<sub>0</sub>:</font> <font class="val" id="m0">{{ "{:.2f}".format(light_curve['microlensing_fit']['m0']) }}</font></td>
+            <td><font class="key">Show Model:</font> <font class="val"><input type="checkbox" id="show_model" onChange="toggleModel();" /></font></td>
+            <td><a href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}%20{{ "{:.5f}".format(light_curve['dec']) }}&radius=3" target="_blank">PTF Marshal</a></td>
+            <td><span id="sdss_qso"></span></td>
         </tr>
     </table>
     <br/>
@@ -154,33 +276,39 @@
     <table width="100%">
         <tr>
             <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
-            <td align="center">
+            <td align="center" valign="top">
                 
                 <a id="previousLightCurve">Previous</a> | <a id="nextLightCurve">Next</a>
                 <br/><br/>
                 <form method="get">
-                    <input type="hidden" name="field_id" value="{{ field_id }}" />
-                    <input type="hidden" name="ccd_id" value="{{ ccd_id }}" />
-                    <input type="hidden" name="source_id" value="{{ source_id }}" />
-                    <input type="hidden" name="update_status" value="true" />
-                    
-                    <input type="submit" id="flagAsGalaxy" name="status" value="Galaxy" class="galaxy" />
-                    <input type="submit" id="flagAsBoring" name="status" value="Boring" class="boring" /><br/><br/>
-                    <input type="submit" id="flagAsInteresting" name="status" value="Interesting" class="interesting" />
-                    <input type="submit" id="flagAsCandidate" name="status" value="Candidate" class="candidate" />
+                    <input type="hidden" name="field_id" value="{{ light_curve['field_id'] }}" />
+                    <input type="hidden" name="ccd_id" value="{{ light_curve['ccd_id'] }}" />
+                    <input type="hidden" name="source_id" value="{{ light_curve['source_id'] }}" />
+                    <input type="hidden" name="set_tags" value="true" />
+                    <ul class="tagList" style="height: 250px; overflow: scroll;">
+                    {% for tag in all_tags %}
+                        {% if tag in light_curve['tags'] %}
+                            <li class='clicked'><input type="checkbox" name="tags" onChange="this.form.submit();" value="{{ tag }}" checked="checked" />
+                        {% else %}
+                            <li><input type="checkbox" name="tags" onChange="this.form.submit();" value="{{ tag }}"/>
+                        {% endif %}
+                        {{tag}}</li>
+                    {% endfor %}
+                        <li><input type="text" name="new_tag" size=15 placeholder="e.g. rr lyrae"/><input type="submit" value="Add new tag"/></li>
+                    </ul>
                 </form>
                 
-                <br/><br/>
+                <br/>
                 <hr width="75%"/>
                 <br/>
                 
                 SDSS Image<br/>
                 <img id="sdssImage" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
                 <br/><br/>
-                <!-- TODO: Make this optional (button 'Load PTF Image')
                 PTF Image<br/>
-                <img id="ptfImage" height="200px" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
-                -->
+                <span id="ptfImageText" style="color: #aaa;"><i>Hover data point to load image</i></span>
+                <img id="ptfLoader" style="display: none;" src="{{ url_for('static', filename='images/ajax-loader.gif') }}" />
+                <img id="ptfImage" style="display: none;" height="200px" onload="hide_ptf_loading();" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
             </td>
             
         </tr>

@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import datetime
     
 from flask import Blueprint, render_template, session, redirect, url_for, \
      request, flash, g, jsonify, abort, send_file
@@ -9,14 +10,31 @@ from flaskext.openid import COMMON_PROVIDERS
 
 import numpy as np
 import pyfits as pf
+import pymongo
+from bson.objectid import ObjectId
+from werkzeug import Response
 
-from ptf.db.mongodb import update_candidate_status
+from ptf.db.mongodb import update_light_curve_document_tags
 
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, light_curve_collection, candidate_status_collection, table_state_collection
+from ptf_web.database import db_session, User, light_curve_collection, field_collection, table_state_collection
 
 mod = Blueprint('candidates', __name__)
+
+# Jsonify to deal with mongodb objectid
+class MongoJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        elif isinstance(obj, ObjectId):
+            return unicode(obj)
+        return json.JSONEncoder.default(self, obj)
+
+def jsonify(*args, **kwargs):
+    """ jsonify with support for MongoDB ObjectId
+    """
+    return Response(json.dumps(dict(*args, **kwargs), cls=MongoJsonEncoder), mimetype='application/json')
 
 def str_encode_field_ccd_source(field_id, ccd_id, source_id):
     return "f{}c{}s{}".format(field_id, ccd_id, source_id)
@@ -37,40 +55,27 @@ def candidate_list():
         field_ids = [int(x) for x in request.args.getlist("field_id")]
         search["field_id"] = {"$in" : field_ids}
     
+    #search["indices"] = {"delta_chi_squared" : {"$gt" : 500}}
+    #search["field_id"] = {"$in" : [4465]} # HACK
+    
     # Default is to return all, e.g. num=0
     num = request.args.get("num", 0)
     
     # Default is to sort by CCD, Source ID
     if request.args.has_key("sort"):
-        sort = [(x,1) for x in request.args.getlist("sort")]
+        sort = [(x,pymongo.ASCENDING) for x in request.args.getlist("sort")]
     else:
-        sort = [("ccd_id",1), ("source_id",1)]
+        sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
     
     # Default is to get Field ID, CCD ID, Source ID
-    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "delta_chi_squared", "ra", "dec"])
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "tags"])
     
-    raw_candidates = light_curve_collection.find(search, fields=mongo_fields).limit(int(num)).sort(sort)
+    raw_candidates = light_curve_collection.find(search, fields=mongo_fields, sort=sort, limit=int(num))
     
     candidates = []
     for c in list(raw_candidates):
-        #candidates.append([c["field_id"],c["ccd_id"],c["source_id"]])
-        
-        if not c.has_key("delta_chi_squared"):
-            c["delta_chi_squared"] = ""
-            
-        c_dict = dict([(key,val) for key,val in c.items() if key != "_id"])
-        
-        raw_status = candidate_status_collection.find_one({"light_curve_id" : c["_id"]})
-        if raw_status == None:
-            c_dict["status"] = "<font color='#aaaaaa'>none</font>"
-        else:
-            if raw_status["status"] == "Candidate":
-                c_dict["status"] = "<font color='rgba(215, 25, 28, 0.95)'>{}</font>".format(raw_status["status"])
-            else:
-                c_dict["status"] = raw_status["status"]
-                
-        candidates.append(c_dict)
-    
+        candidates.append(dict(c))
+
     return jsonify(aaData=list(candidates))
     
 @mod.route('/json/candidate_data', methods=["GET"])
@@ -83,15 +88,7 @@ def candidate_data():
     search["ccd_id"] = int(request.args["ccd_id"])
     search["source_id"] = int(request.args["source_id"])
     
-    raw_candidate = light_curve_collection.find_one(search)
-    candidate = dict([(key,val) for key,val in raw_candidate.items() if key != "_id"])
-    
-    raw_status = candidate_status_collection.find_one({"light_curve_id" : raw_candidate["_id"]})
-    if raw_status == None:
-        candidate["status"] = ""
-    else:
-        candidate["status"] = raw_status["status"]
-        
+    candidate = light_curve_collection.find_one(search)
     return jsonify(light_curve=candidate)
 
 @mod.route('/candidates', methods=["GET"])
@@ -114,16 +111,25 @@ def plot():
     field_id = int(request.args["field_id"])
     ccd_id = int(request.args["ccd_id"])
     
-    if request.args.has_key("update_status"):
-        if request.args["update_status"] == "true":
+    if request.args.has_key("set_tags"):
+        if request.args["set_tags"] == "true":
             try:
-                status = request.args["status"].strip()
+                tags = [str(x) for x in request.args.getlist("tags")]
             except KeyError:
-                status = ""
+                tags = []
             
-            update_candidate_status(field_id, ccd_id, source_id, status, light_curve_collection, candidate_status_collection)
+            if request.args.has_key("new_tag"):
+                tags.append(str(request.args["new_tag"]))
+            
+            lc_document = light_curve_collection.find_one({"field_id" : field_id, "ccd_id" : ccd_id, "source_id" : source_id})
+            
+            tags = [str(tag).strip() for tag in tags if len(tag.strip()) > 0]
+            
+            if lc_document != None:
+                update_light_curve_document_tags(lc_document, tags, light_curve_collection)
     
-    return render_template('candidates/plot.html', field_id=field_id, ccd_id=ccd_id, source_id=source_id)
+    lc_document = light_curve_collection.find_one({"field_id" : field_id, "ccd_id" : ccd_id, "source_id" : source_id})
+    return render_template('candidates/plot.html', light_curve=lc_document, all_tags=sorted(light_curve_collection.distinct("tags")))
 
 @mod.route('/mongo/save_table_state', methods=["POST"])
 @requires_login

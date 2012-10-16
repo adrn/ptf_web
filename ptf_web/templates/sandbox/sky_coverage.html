@@ -1,10 +1,10 @@
 <!-- To produce the data for this page:
     
     1) Use Python to generate the JSON data
-        json_data = coverageplots.fits_to_json("data/exposureData.fits")
-        f = open("ptf_fields.json", "w"); f.write(json_data); f.close()
+        python survey_coverage.py --dump-json --file 'filename'
     
     2) Copy JSON file to ptf_web/static/json/
+        scp nav:~/ptf/data/survey_coverage/ptf_fields.json ptf_web/static/json/
     
 -->
 
@@ -187,7 +187,7 @@
                 <div class="title">PTF Sky Coverage</div>
                 <div class="hint">
                     <p class="indent">
-                        - data as of 2012-05-22<br/>
+                        - data as of 2012-08-14<br/>
                         - shown in equatorial coordinates<br/>
                         - drag to rotate the origin<br/>
                         - mouse over to get field info<br/>

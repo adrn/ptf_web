@@ -7,37 +7,6 @@
     <script src="{{ url_for('static', filename='js/datatables/js/jquery.dataTables.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/datatables/js/dataTables.fnGetHiddenNodes.js') }}"></script>
     
-    <!--<script type="text/javascript">
-        $(document).ready(function() {
-            $("tr").click(function(){
-                window.location = $(this).attr("url");
-            });
-            
-            $("tr.even").hover(
-                function(){
-                    $(this).css({"background":"#80C3E0"});
-                    $(this).css({"cursor":"pointer"});
-                },
-                function(){
-                    $(this).css({"background":"#eee"});
-                    $(this).css({"cursor":"default"});
-                }
-            );
-            
-            $("tr.odd").hover(
-                function(){
-                    $(this).css({"background":"#90DCFC"});
-                    $(this).css({"cursor":"pointer"});
-                },
-                function(){
-                    $(this).css({"background":"#fff"});
-                    $(this).css({"cursor":"default"});
-                }
-            );
-            
-        });
-    </script>-->
-    
     <script type="text/javascript">
         function toggleUnknown(dataTable) {
                 if ($("#onlyUnknown").attr("checked") == "checked") {
@@ -66,7 +35,10 @@
             <th>CCD ID</th>
             <th>Source ID</th>
             <th>&Delta;&chi;<sup>2</sup></th>
-            <th>Status</th>
+            <th>J</th>
+            <th>K</th>
+            <th>&eta;</th>
+            <th>Tags</th>
             <!--<th>RA</th>
             <th>Dec</th>
             <th>Num. of R-band<Br/>Observations</th>-->
@@ -82,6 +54,9 @@
                 <th><input type="text" name="search_ccd_id" value="Search ccds" class="search_init" /></th>
                 <th><input type="text" name="search_source_id" value="Search sources" class="search_init" /></th>
                 <th><input type="text" name="search_delta_chi_sq" value="Search " class="search_init" /></th>
+                <th><input type="text" name="search_j" value="Search J" class="search_init" /></th>
+                <th><input type="text" name="search_k" value="Search K" class="search_init" /></th>
+                <th><input type="text" name="search_eta" value="Search eta" class="search_init" /></th>
                 <th><input type="text" name="search_status" value="Search status" class="search_init" /></th>
             </tr>
         </tfoot>        
@@ -107,16 +82,47 @@
                     { "mData" : "field_id" },
                     { "mData" : "ccd_id" },
                     { "mData" : "source_id" },
-                    { "mData" : "delta_chi_squared" },
-                    { "mData" : "status" }
+                    { "mData" : "indices.delta_chi_squared" },
+                    { "mData" : "indices.j" },
+                    { "mData" : "indices.k" },
+                    { "mData" : "indices.eta" },
+                    { "mData" : "tags" }
                 ],
                 "aoColumnDefs": [
                     {
                         "fnRender": function ( oObj ) {
-                            var s = oObj.aData.delta_chi_squared; // current value
+                            var s = oObj.aData.indices.delta_chi_squared; // current value
                             return parseInt(s).toString();
                         },
                         "aTargets": [ 3 ]
+                    },
+                    {
+                        "fnRender": function ( oObj ) {
+                            var s = oObj.aData.indices.j; // current value
+                            return parseInt(s).toString();
+                        },
+                        "aTargets": [ 4 ]
+                    },
+                    {
+                        "fnRender": function ( oObj ) {
+                            var s = oObj.aData.indices.k; // current value
+                            return parseFloat(s).toFixed(3);
+                        },
+                        "aTargets": [ 5 ]
+                    },
+                    {
+                        "fnRender": function ( oObj ) {
+                            var s = oObj.aData.indices.eta; // current value
+                            return parseFloat(s).toFixed(3);
+                        },
+                        "aTargets": [ 6 ]
+                    },
+                    {
+                        "fnRender": function ( oObj ) {
+                            var s = oObj.aData.tags; // current value
+                            return s.join();
+                        },
+                        "aTargets": [ 7 ]
                     }
                 ],
                 "bPaginate" : false,
@@ -168,34 +174,36 @@
                     }
                     
                     if (alreadyLinked == false) {
-                            
-                        $("#candidateList tbody tr").click( function( e ) {                        
-                            var field = $(this).children()[0].innerText;
-                            var ccd_id = $(this).children()[1].innerText;
-                            var source_id = $(this).children()[2].innerText;
-                            
-                            var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
-                            //window.location = url;
-                            
-                            window.open(
-                              url,
-                              '_blank' // <- This is what makes it open in a new window.
-                            );
-                            
-                        });
-                        
-                        $("#candidateList tbody tr").mouseover( function(e) {
-                            $(this).attr("oldClass", $(this).attr("class"));
-                            $(this).attr("class", "mouseover");
-                            $(this).css("cursor", "pointer");
-                        });
-                        
-                        $("#candidateList tbody tr").mouseout( function(e) {
-                            $(this).attr("class", $(this).attr("oldClass"));
-                            $(this).css("cursor", "default");
-                        });
                         
                         if ($("#candidateList tbody tr").length > 1) {
+                            console.log("In here");
+                            $("#candidateList tbody tr").click( function( e ) {
+                                //console.log($(this).children()[0].innerHTML);
+                                var field = $(this).children()[0].innerHTML;
+                                var ccd_id = $(this).children()[1].innerHTML;
+                                var source_id = $(this).children()[2].innerHTML;
+                                
+                                var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
+                                //window.location = url;
+                                
+                                window.open(
+                                  url,
+                                  '_blank' // <- This is what makes it open in a new window.
+                                );
+                                
+                            });
+                            
+                            $("#candidateList tbody tr").mouseover( function(e) {
+                                $(this).attr("oldClass", $(this).attr("class"));
+                                $(this).attr("class", "mouseover");
+                                $(this).css("cursor", "pointer");
+                            });
+                            
+                            $("#candidateList tbody tr").mouseout( function(e) {
+                                $(this).attr("class", $(this).attr("oldClass"));
+                                $(this).css("cursor", "default");
+                            });
+                        
                             alreadyLinked = true;
                         }
                     }

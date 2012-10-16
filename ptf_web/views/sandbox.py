@@ -6,11 +6,15 @@ from flask import Blueprint, render_template, session, redirect, url_for, \
      request, flash, g, jsonify, abort, send_file
 from flaskext.openid import COMMON_PROVIDERS
 
+import apwlib.geometry as ag
 import numpy as np
 
+import survey_coverage
+import ptf.globals as pg
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
 #from ptf_web.database import db_session, User, lc_db_session, LightCurve
+from ptf_web.database import field_collection
 
 mod = Blueprint('sandbox', __name__)
 
@@ -56,6 +60,53 @@ def csv():
 @mod.route('/sandbox/sky_coverage', methods=["GET"])
 def sky_coverage():
     return render_template('sandbox/sky_coverage.html')
+    
+@mod.route('/json/detailed_coverage', methods=["GET"])
+def detailed_coverage_json():
+    """ Return a JSON structure """
+    
+    filter = request.args.get("filter", "R") # filter
+    size = request.args.get("size", 1.) # size in degrees
+    
+    if not (request.args.has_key("ra") and request.args.has_key("dec")):
+        abort(404)
+    
+    ra = ag.RA.fromDegrees(str(request.args["ra"]))
+    dec = ag.Dec.fromDegrees(str(request.args["dec"]))
+    size = ag.Angle.fromDegrees(str(size))
+    
+    fields = survey_coverage.get_overlapping_fields(ra.degrees, dec.degrees, filter=filter, size=size.degrees)
+    
+    mongo_fields = []
+    for field in fields:
+        mongo_field = field_collection.find_one({"_id" : field.id})
+        if mongo_field == None: continue
+        mongo_field["size"] = pg.camera_size_radius
+        mongo_field["number_of_observations"] = field.number_of_exposures
+        mongo_fields.append(mongo_field)
+    
+    return jsonify(fields=mongo_fields, center={"ra" : ra.degrees, "dec" : dec.degrees, "size" : size.degrees})
+    
+@mod.route('/sandbox/detailed_coverage', methods=["GET"])
+def detailed_coverage():
+    """ Return ?? """
+    
+    if request.args.has_key("field_id"):
+        # Zoom in around a field
+        # TODO:
+        return abort(404)
+    
+    if request.args.has_key("ra") and request.args.has_key("dec"):
+        # TODO: Make it so linking to a specific coordinate is possible
+        size = request.args.get("size", 1.5) # size in degrees
+        
+        ra = ag.RA.fromDegrees(str(request.args["ra"]))
+        dec = ag.Dec.fromDegrees(str(request.args["dec"]))
+        size = ag.Angle.fromDegrees(str(size))
+
+        return render_template('sandbox/detailed_coverage.html', init_ra=ra.degrees, init_dec=dec.degrees, init_size=size.degrees)
+    
+    return render_template('sandbox/detailed_coverage.html', init_ra="", init_dec="", init_size="")
 
 """
 @mod.route('/candidates/plot', methods=["GET"])

@@ -37,11 +37,11 @@ input.oid {
     padding: 2px;
 }
 
-input[type="submit"] {
+/*input[type="submit"] {
     background: #CADEEB;
     color: #335E79;
     border-color: #335E79;
-}
+}*/
 
 input[name="openid"] {
     background: url(openid.png) 4px no-repeat;
@@ -157,7 +157,7 @@ font.key {
     color: #666;
 }
 
-font.val {
+.val {
     color: #74B7D4
 }
 
@@ -212,7 +212,7 @@ table.info tr.titles td.last {
 
 /* Candidate form
 ======================================================================== */
-
+/*
 input[type=submit] {
     display: inline-block;
 	outline: none;
@@ -244,7 +244,7 @@ input[type=submit].boring {
 
 input[type=submit].interesting {
     background-color: rgba(253, 174, 97, 0.75);
-}
+}*/
 
 #statusBanner {
     font-size: 18pt;
@@ -257,4 +257,17 @@ input[type=submit].interesting {
     -webkit-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
 	-moz-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
 	box-shadow: 2px 2px 4px rgba(0,0,0,.6);
+}
+
+.tagList {
+    list-style-type: none;
+}
+
+.tagList li {
+    font-size: 16pt;
+    padding: 5px;
+}
+
+.tagList li.clicked {
+    background: rgba(254, 230, 206, 1);
 }

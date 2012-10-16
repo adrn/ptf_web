@@ -1,5 +1,6 @@
-import os
-import urllib2, base64
+import os, re
+import cookielib, urllib, urllib2, base64, json
+
 import cStringIO as StringIO
 import gzip
 
@@ -14,9 +15,10 @@ from flaskext.openid import COMMON_PROVIDERS
 from ptf_web import oid, app,ptf_user,ptf_password
 #from ptf_web.search import search as perform_search
 from ptf_web.utils import requires_login, request_wants_json
-from ptf_web.database import db_session, User, light_curve_collection
+from ptf_web.database import db_session, User, light_curve_collection, field_collection
 
 from ptf.db.mongodb import get_light_curve_from_collection
+import apwlib.geometry as g
 
 mod = Blueprint('general', __name__)
 
@@ -92,6 +94,15 @@ def ptfimage():
     #print 'Content-Type:image/png\n'
     return send_file(output, mimetype="image/png")
 
+@mod.route('/json/field', methods=["GET"])
+def field_data():
+    """ Load field information from MongoDB """
+    
+    search = {}
+    search["_id"] = int(request.args["id"])
+    field = field_collection.find_one(search)
+
+    return jsonify(field)
 
 """
 @mod.route('/search/')
@@ -210,3 +221,58 @@ def create_or_login(resp):
     else:
         flash(u'Successfully signed in!')
     return redirect(oid.get_next_url())
+
+@mod.route("/search/simbad", methods=["GET", "POST"])
+def search_simbad():
+    try:
+        ra = request.args["ra"]
+        dec = request.args["dec"]
+    except:
+        return "Invalid RA and Dec!"
+    
+    if float(dec) > 0:
+        dec = "+{}".format(dec)
+        
+    url = "http://simbad.u-strasbg.fr/simbad/sim-coo?output.format=ASCII&Coord=" + ra + dec + "&Radius=1&Radius.unit=arcmin&otypedisp=V"
+    try:
+        simbadreq = urllib.urlopen(url)
+        data = simbadreq.read().split('\n')
+        
+        if data[0].startswith('!! No astronomical object found'):
+            return jsonify({})
+        else:
+            pattr = re.compile("Coordinates\(ICRS,ep=J2000,eq=2000\): ([0-9]{2}\s[0-9]{2}\s[0-9\.]+)\s+([\-0-9]+ \d\d [0-9\.]+)")
+            
+            for line in data:
+                grps = pattr.search(line)
+                if grps != None:
+                    ra,dec = grps.groups()
+                    break
+                    
+    except:
+        return "Invalid RA and Dec!" # failed to send request
+    
+    ra = g.RA.fromDegrees(str(ra))
+    dec = g.Dec(str(dec))
+    
+    return jsonify({"ra" : ra.degrees, "dec" : dec.degrees})
+
+@mod.route("/search/sdss", methods=["GET", "POST"])
+def search_sdss():
+    try:
+        ra = request.args["ra"]
+        dec = request.args["dec"]
+    except:
+        return "Invalid RA and Dec!"
+    
+    username = 'adrian'
+    password = 'lateralus0'
+    cj = cookielib.CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    login_data = urllib.urlencode({'username' : username, 'password' : password})
+    opener.open('http://navtara.caltech.edu/galactic/marshal/login.php', login_data)
+    
+    url = "http://navtara.caltech.edu/cgi-bin/ptf/galactic/get_sdss.cgi?ra={}&dec={}".format(ra,dec)
+    resp = opener.open(url)
+    
+    return jsonify(json.loads(resp.read()))
