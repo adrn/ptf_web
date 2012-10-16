@@ -153,11 +153,13 @@ tr.mouseover {
     background: #91DEFF;
 }
 
-font.key {
+.key {
+    font-size: 14pt;
     color: #666;
 }
 
 .val {
+    font-size: 14pt;
     color: #74B7D4
 }
 
@@ -176,6 +178,8 @@ table.info {
 }
 
 table.info td {
+    padding-left: 10px;
+    padding-right: 10px;
     text-align: center;
 }
 
@@ -270,4 +274,12 @@ input[type=submit].interesting {
 
 .tagList li.clicked {
     background: rgba(254, 230, 206, 1);
+}
+
+ul#more_info {
+    list-style-type: none;
+}
+
+ul#more_info li {
+    margin-left: 30px;
 }

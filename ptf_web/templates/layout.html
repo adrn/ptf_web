@@ -14,7 +14,17 @@
     <div id="wrapper">
         <div id="header">
             {% block body_title %}
-                <h1><span>{{ self.title() }}</span></h1>
+                <h1 style="display: inline;"><span>{{ self.title() }}</span></h1>
+                {% if light_curve %}
+                    &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;
+                    <font class="key">Field ID:</font> <font class="val">{{light_curve['field_id']}}</font>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <font class="key">CCD ID:</font> <font class="val">{{light_curve['ccd_id']}}</font>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <font class="key">Source ID:</font> <font class="val">{{light_curve['source_id']}}</font>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <font class="key">RA/Dec:</font> <font class="val">{{ "{:.5f}".format(light_curve['ra']) }} {{ "{:.5f}".format(light_curve['dec']) }}</font>
+                {% endif %}
             {% endblock %}
             {% for message in get_flashed_messages() %}
                 <span class="message">--> {{ message }}</span>

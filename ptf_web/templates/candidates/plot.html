@@ -37,10 +37,6 @@
         
         /* -------------------------------------------------- */
         
-        // some globals for plotting
-        var PLOT_DATA_POINTS, 
-            graph;
-        
         function setNextPreviousLinks(data) {
             var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]),
                 next_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.next[0], data.next[1], data.next[2]);
@@ -59,10 +55,19 @@
             $("#ptfImage").attr("src", ptfImageURL);
         }
         
-        function draw_plot(data, show_model) {
-            if (show_model == undefined) {
-                show_model = false;
-            }
+        // some globals for plotting
+        var PLOT_DATA_POINTS, 
+            graph,
+            t0, tE, m0, u0;
+        
+        // Define some plot options
+        var options = {
+            xaxis:{ label:'Day (MJD - Epoch)' },
+            yaxis: { label: 'R (mag)' }
+        };
+        
+        function draw_plot(data) {
+            show_model = $("#show_model").is(":checked");
             
             var dataset = [];
             
@@ -71,12 +76,6 @@
                 plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : -data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
             }
 
-            // Define some options
-            options = {
-                xaxis:{ label:'Day (MJD - Epoch)' },
-                yaxis: { label: 'R (mag)' }
-            };
-            
             dataset.push({data : plot_data,
                           color: "#1E67BA",
                           points: { show: true, radius: 3 },
@@ -90,10 +89,6 @@
             
             if (show_model == true) {
                 // Compute model line
-                var t0 = parseFloat("{{ light_curve['microlensing_fit']['t0'] }}"),
-                    u0 = parseFloat("{{ light_curve['microlensing_fit']['u0'] }}"),
-                    tE = parseFloat("{{ light_curve['microlensing_fit']['tE'] }}"),
-                    m0 = parseFloat("{{ light_curve['microlensing_fit']['m0'] }}");
             
                 function model(t) {
                     u = Math.sqrt(u0*u0 + Math.pow( ((t-t0)/tE), 2));
@@ -121,6 +116,25 @@
                 dataset = dataset[0];
             }
             
+            console.log(dataset);
+            // Setup the graph
+            if (graph == undefined) {
+                graph = $.graph('placeholder', dataset, options);
+            } else {
+                graph.updateData(dataset)
+            }
+        
+        }
+        
+        function dataReceived(data) {
+            // TODO: Load preference from user's configuration
+            PLOT_DATA_POINTS = data;
+            
+            t0 = parseFloat("{{ light_curve['microlensing_fit']['t0'] }}");
+            u0 = parseFloat("{{ light_curve['microlensing_fit']['u0'] }}");
+            tE = parseFloat("{{ light_curve['microlensing_fit']['tE'] }}");
+            m0 = parseFloat("{{ light_curve['microlensing_fit']['m0'] }}");
+            
             // Set data-dependent fields
             var baseline = array_max(data.light_curve.mjd) - array_min(data.light_curve.mjd);
             $("#baseline").text("" + parseInt(baseline) + " days");
@@ -137,14 +151,6 @@
             var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=40&height=40".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssImage").attr("src", sdssImageURL);
             
-            // Setup the graph
-            graph = $.graph('placeholder', dataset, options);
-        
-        }
-        
-        function dataReceived(data) {
-            // TODO: Load preference from user's configuration
-            PLOT_DATA_POINTS = data;
             draw_plot(PLOT_DATA_POINTS, true);
         }
         
@@ -207,6 +213,7 @@
                     $('#sdss_colors').append("<font class='key'>Type:</font> <font class='val'>" + (data.type == 6 ? 'Star' : (data.type==3?'Galaxy' : 'Unknown'))+'</font><br>');
                     $('#sdss_colors').append("<font class='key'>Dist:</font> <font class='val'>" + roundNumber(data.dist*3600, 2) + '"</font>');
                     
+                    // Richards QSO cut
                     if (( (psf_mags.g - psf_mags.r) > -0.2) && ( (psf_mags.g - psf_mags.r) < 0.9) && 
                        ( (psf_mags.r - psf_mags.i) > -0.2) && ( (psf_mags.r - psf_mags.i) < 0.6) && 
                        ( (psf_mags.i - psf_mags.z) > -0.15) && ( (psf_mags.i - psf_mags.z) < 0.5) && 
@@ -229,54 +236,30 @@
             $("#ptfImage").css("display", "none");        
         }
         
-        function toggleModel() {
-            console.log("Checkbox: " + $("#show_model").is(":checked"));
-            
-            if ($("#show_model").is(":checked")) {
-                draw_plot(PLOT_DATA_POINTS, true);
-            } else {
-                draw_plot(PLOT_DATA_POINTS, false);
-            }
-        }
-        
     </script>
                
     
 {% endblock %}
 
 {% block body %}
-    
-    <table width="1400px" class="info">
-        <!--<tr class="status">
-            <td colspan="8" id="statusBanner">
+    <table class="info">
+        <tr class="titles">
+            <th>Microlensing Model (show <input type="checkbox" id="show_model" onChange="draw_plot(PLOT_DATA_POINTS);" />)</th>
+            <th>SDSS <a target="_blank" id="sdssLink">(open)</a> <span id="sdss_qso"></span></th>
+            <th>SIMBAD <a target="_blank" id="simbadLink">(open)</a></th>
+            <th>PTF <a target="_blank" href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}%20{{ "{:.5f}".format(light_curve['dec']) }}&radius=3">(open)</a></th>
+        </tr>
+        <tr class="titles">
+            <td class="key" width=400px>t<sub>0</sub>: <font class="val" id="t0">{{ "{:.1f}".format(light_curve['microlensing_fit']['t0']) }}</font>,&nbsp;
+                t<sub>E</sub>: <font class="val" id="tE">{{ "{:.2f}".format(light_curve['microlensing_fit']['tE']) }}</font>,&nbsp;
+                u<sub>0</sub>: <font class="val" id="u0">{{ "{:.3f}".format(light_curve['microlensing_fit']['u0']) }}</font>,&nbsp;
+                m<sub>0</sub>: <font class="val" id="m0">{{ "{:.2f}".format(light_curve['microlensing_fit']['m0']) }}</font>
             </td>
-        </tr>-->
-        <tr class="titles">
-            <td><font class="key">Field ID:</font> <font class="val">{{light_curve['field_id']}}</font></td>
-            <td><font class="key">CCD ID:</font> <font class="val">{{light_curve['ccd_id']}}</font></td>
-            <td><font class="key">Source ID:</font> <font class="val">{{light_curve['source_id']}}</font></td>
-            <td><font class="key">Num. Observations:</font> <font class="val" id="numObservations">{{ light_curve['mjd']|length }}</font></td>
-            <td><font class="key">Baseline:</font> <font class="val" id="baseline"></font></td>
-            <td><font class="key">RA/Dec:</font><br/><font class="val" id="ra">{{ "{:.5f}".format(light_curve['ra']) }}</font><br/><font class="val" id="dec">{{ "{:.5f}".format(light_curve['dec']) }}</font></td>
-            <td><font class="key"><a target="_blank" id="sdssLink">SDSS info:</a></font><p id="sdss_colors" class="val"></p></td>
-            <td><font class="key"><a target="_blank" id="simbadLink">Simbad data:</a></font><p id="simbad_data" class="val"></p></td>
-        </tr>
-        <tr class="titles">
-            <td><font class="key">t<sub>0</sub>:</font> <font class="val" id="t0">{{ "{:.1f}".format(light_curve['microlensing_fit']['t0']) }}</font></td>
-            <td><font class="key">t<sub>E</sub>:</font> <font class="val" id="tE">{{ "{:.2f}".format(light_curve['microlensing_fit']['tE']) }}</font></td>
-            <td><font class="key">u<sub>0</sub>:</font> <font class="val" id="u0">{{ "{:.3f}".format(light_curve['microlensing_fit']['u0']) }}</font></td>
-            <td><font class="key">m<sub>0</sub>:</font> <font class="val" id="m0">{{ "{:.2f}".format(light_curve['microlensing_fit']['m0']) }}</font></td>
-            <td><font class="key">Show Model:</font> <font class="val"><input type="checkbox" id="show_model" onChange="toggleModel();" /></font></td>
-            <td><a href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}%20{{ "{:.5f}".format(light_curve['dec']) }}&radius=3" target="_blank">PTF Marshal</a></td>
-            <td><span id="sdss_qso"></span></td>
-        </tr>
-    </table>
-    <br/>
-    
-    <table width="100%">
-        <tr>
-            <td width="80%"><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
-            <td align="center" valign="top">
+            <td width=200px><span id="sdss_colors" class="val"></span></td>
+            <td width=200px><span id="simbad_data" class="val"></span></td>
+            <td width=200px></td>
+            <td width=200px></td>
+            <td rowspan=2 align="center" valign="top">
                 
                 <a id="previousLightCurve">Previous</a> | <a id="nextLightCurve">Next</a>
                 <br/><br/>
@@ -285,7 +268,7 @@
                     <input type="hidden" name="ccd_id" value="{{ light_curve['ccd_id'] }}" />
                     <input type="hidden" name="source_id" value="{{ light_curve['source_id'] }}" />
                     <input type="hidden" name="set_tags" value="true" />
-                    <ul class="tagList" style="height: 250px; overflow: scroll;">
+                    <ul class="tagList" style="height: 340px; overflow: scroll;">
                     {% for tag in all_tags %}
                         {% if tag in light_curve['tags'] %}
                             <li class='clicked'><input type="checkbox" name="tags" onChange="this.form.submit();" value="{{ tag }}" checked="checked" />
@@ -310,13 +293,22 @@
                 <img id="ptfLoader" style="display: none;" src="{{ url_for('static', filename='images/ajax-loader.gif') }}" />
                 <img id="ptfImage" style="display: none;" height="200px" onload="hide_ptf_loading();" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
             </td>
-            
+        </tr>
+
+        <tr>
+            <td colspan=5><div id="placeholder" style="width:100%;height:650px;z-index:10000;"></div></td>
         </tr>
         <tr>
             <td></td>
             <td align="center"></td>
         </tr>
     </table>
+    
+    <br/>
+    <h2>More info:</h2>
+    <ul id="more_info" style="margin-top: 10px;">
+        <li><font class="val" id="numObservations">{{ light_curve['mjd']|length }}</font> <font class="key">observations over</font> <font class="val" id="baseline"></font></li>
+    </ul>
     <!--<input id="reset" type="button" value="Reset axes" />-->
         
     <!--<pre><span class=ig>some code!</span></pre>-->
