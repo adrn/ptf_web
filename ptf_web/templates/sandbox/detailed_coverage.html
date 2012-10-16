@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+        <script src="{{ url_for('static', filename='js/d3.v2.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/jquery-tooltip/jquery.tooltip.min.js') }}"></script>
+        
+        <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='colorbrewer.css') }}"/>
+        
+        <style type="text/css">
+            html, body {
+                font-family: "Helvetica Neue", Helvetica;
+                font-weight: 300;
+                background: #343434;
+                overflow: hidden;
+                
+                margin: 0;
+                padding: 0;
+                height: 100%;
+            }
+            
+            #container {
+                width: 100%;
+                min-height: 100%;
+                
+                margin: 0 auto;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica;
+            }
+            
+            #chart, #header, #footer {
+                position: absolute;
+                top: 0;
+            }
+            
+            #header, #footer {
+              z-index: 1;
+              display: block;
+              text-shadow: -1px 1px 0 #000;
+            }
+            
+            #header {
+                left: 0px;
+                top: 80px;
+                width: 40%;
+                min-width: 600px;
+                padding-left: 25px;
+            }
+            
+            #placeholder {
+                /*margin: 0 auto;*/
+                position: absolute;
+                top: 40px;
+                right: 20px;
+                width: 800px;
+                height: 800px;
+                border: 1px solid #fff;
+            }
+            
+            .hint {
+                font-size: 20px;
+                color: #bbb;
+            }
+            
+            .title {
+                color: rgb(145, 191, 219);
+                font-size: 42px;
+                font-weight: 400;
+            }
+            
+            #footer {
+                color: #bbb;
+                right: 140px;
+                text-align: right;
+                top: 95%;
+            }
+            
+            div#tooltip {
+                text-align: left;
+                line-height: 25px;
+                padding: 4px;
+                
+                background: rgba(255, 237, 160, 0.7);
+                position: absolute;
+                display: none;
+                
+                font-size: 16pt;
+                color: #555;
+                border-radius: 3px;
+                
+                -moz-box-shadow: -2px 2px 5px #444;
+                -webkit-box-shadow: -2px 2px 5px #444;
+                box-shadow: -2px 2px 5px #444;
+            }
+            
+            strong {
+                font-weight: 400;
+            }
+            
+            rect {
+              fill: none;
+              pointer-events: all;
+            }
+            
+            pre {
+              font-size: 18px;
+            }
+            
+            line {
+              stroke: #000;
+              stroke-width: 1.5px;
+            }
+            
+            .string, .regexp {
+              color: #f39;
+            }
+            
+            .keyword {
+              color: #00c;
+            }
+            
+            .comment {
+              color: #777;
+              font-style: oblique;
+            }
+            
+            .number {
+              color: #369;
+            }
+            
+            .class, .special {
+              color: #1181B8;
+            }
+            
+            .indent {
+                margin: 0;
+                padding-left: 20px;
+                line-height: 30px;
+            }
+            
+            .small {
+                font-size: 13pt;
+            }
+            
+            a:link, a:visited {
+              color: #000;
+              text-decoration: none;
+            }
+            
+            a:hover {
+              color: #666;
+            }
+            
+            svg {
+              pointer-events: all;
+            }
+            
+            circle {
+              fill: #dbe4f0;
+            }
+            
+            path {
+              /*fill: #fff;
+              fill-opacity: 0.5;*/
+              stroke: #777;
+            }
+            
+            table.hint td {
+                padding: 3px;
+                font-size: 12pt;       
+            }
+            
+            table.hint td.right {
+                text-align: right;
+                font-size: 16pt;
+                color: rgb(239, 138, 98);
+            }
+            
+            /* 
+                matched_field_list table 
+            */
+            
+            #matched_field_list_div {
+                overflow: scroll;
+                height: 500px;
+            }
+            
+            table#matched_field_list thead td {
+                padding: 15px;
+                border-bottom: 1px solid #666;
+            }
+            
+            table#matched_field_list tbody td {
+                text-align: center;
+                border-bottom: 1px solid #444;
+                padding-top: 3px;
+                padding-bottom: 3px;
+            }
+            
+            #placeholder .footer {
+                position: absolute;
+                font-size: 18pt;
+                color: white;
+                bottom: -40px;
+                left: 370px;
+            }
+            
+        </style>
+        <script type="text/javascript">
+            String.prototype.format = function() {
+                var args = arguments;
+                return this.replace(/{(\d+)}/g, function(match, number) { 
+                return typeof args[number] != 'undefined'
+                ? args[number]
+                : match
+                ;
+                });
+                };
+        </script>
+        
+	<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-11936482-12']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+    </head>
+    
+    <body>
+        <div id="container">
+            <div id="header">
+                <div class="title">PTF Coverage Check</div>
+                <div class="hint">
+                    <p class="indent">
+                        - data as of 2012-08-14<br/>
+                        - mouse over to get field info<br/>
+                    </p>
+                    <hr align="left" width="50%" color="#ccc" size="1px" />
+                    <p class="indent small">
+                        <table cellspacing=0 cellpadding=0 class="hint">
+                            <tr><td class="right">RA:</td>
+                                <td><input type="text" placeholder="e.g. 136.124 or 08:21:43.1" id="ra" size=25 tabindex=1 />&nbsp;
+                                    <select id="ra_units">
+                                        <option value="degrees" selected="selected">degrees</option>
+                                        <option value="hours">hours</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr><td class="right">Dec:</td>
+                                <td><input type="text" placeholder="e.g. 25.431 or +11:03:31.4" id="dec" size=25 tabindex=2 />&nbsp;degrees
+                                </td>
+                            </tr>
+                            <tr><td class="right">Size:</td>
+                                <td><input type="text" value="1.5" id="size" size=8 tabindex=3 />&nbsp;degrees</td>
+                            </tr>
+                            <tr><td align="center" colspan="2">
+                                <input type="button" style="width: 100px;" tabindex=4 value="Go" onclick="update_position($('#ra').val(), $('#dec').val(), $('#size').val());"  />
+                            </td></tr>
+                        </table>
+                    </p>
+                    <hr align="left" width="50%" color="#ccc" size="1px" />
+                    <div id="matched_field_list_div">
+                    <table id="matched_field_list" cellspacing=0 cellpadding=0>
+                        <thead>
+                            <tr>
+                                <td>Field ID</td>
+                                <td>Center RA</td>
+                                <td>Center Dec</td>
+                                <td>R obs.</td>
+                                <!--<td>Baseline</td>-->
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    </div>
+                </div>            
+            </div>
+            
+            <div id="placeholder">
+                <span class="footer"></span>
+            </div>
+            
+            <div id="footer">
+                &lt;adrn at astro.columbia.edu&gt;
+            </div>
+        </div>
+        
+        <script type="text/javascript">
+            /* Misc. Useful functions */
+            array_max = function( array ){
+                return Math.max.apply( Math, array );
+            };
+            
+            array_min = function( array ){
+                return Math.min.apply( Math, array );
+            };
+            
+            
+            var data; // a global
+            var circles;
+            
+            var svg = d3.select("#placeholder").append("svg:svg")
+                    .attr("width", 800)
+                    .attr("height", 800)
+                    .append("svg:g");
+            
+            var searchCircle = svg.append("circle");
+            
+            function parseAngle(ang) {
+                // First assume it's in hour:minute:second format and try to match it
+                var div = "[:|/|\\t|\\-|\\sHhMmSsDd]{1,2}";
+                var str_pattr = '([+-]{0,1}\\d+)' + div + '(\\d{1,2})' + div + '(\\d{1,2}[\\.0-9]+)' + '[Ss]{0,1}' + '$';
+                var pattr = new RegExp(str_pattr);
+                
+                var matched = ang.match(pattr);
+                
+                if (matched == undefined) {
+                    // If that failed, assume it's a decimal number
+                    str_pattr = '^([0-9\\.]+)';
+                    pattr = new RegExp(str_pattr);
+                    matched = ang.match(pattr);
+                    
+                    console.log("Matched to a decimal");
+                    return parseFloat(matched);
+                }
+                
+                console.log("Matched to HMS/DMS");
+                var a = parseInt(matched[1].replace(/^[0]+/g,"")), 
+                    b = parseInt(matched[2].replace(/^[0]+/g,"")), 
+                    c = parseFloat(matched[3].replace(/^[0]+/g,""));
+                    
+                var sign = a >= 0 ? 1.0 : -1.0;
+                console.log(matched);
+                console.log(a);
+                console.log(b);
+                console.log(c);
+                return sign*(Math.abs(parseFloat(a)) + parseFloat(b)/60. + c/3600.);
+            }
+            
+            function update_position(ra, dec, size) {
+                var ra_val = parseAngle(ra),
+                    dec_degrees = parseAngle(dec);
+                
+                var ra_degrees;
+                if ($("#ra_units").val() == "degrees") {
+                    ra_degrees = ra_val;
+                } else if ($("#ra_units").val() == "hours") {
+                    ra_degrees = ra_val*15.;
+                }
+                
+                console.log("RA Degrees: " + ra_degrees);
+                console.log("Dec Degrees: " + dec_degrees);
+                
+                d3.json("http://deimos.astro.columbia.edu:5000/json/detailed_coverage?ra=" + ra_degrees + "&dec=" + dec_degrees + "&size=" + size, 
+                    function(data) {
+                        // RA is typically shown backwards
+                        var edge_size = data.center.size*4.
+                        var domain_x = [data.center.ra + edge_size/2., data.center.ra - edge_size/2.],
+                            domain_y = [data.center.dec - edge_size/2., data.center.dec + edge_size/2.]
+                        
+                        var x = d3.scale.linear().range([800, 0]).domain(domain_x),
+                            y = d3.scale.linear().range([0, 800]).domain(domain_y),
+                            r_scaler = d3.scale.linear().range([0,200]).domain([0, data.center.size]);
+                        
+                        if (circles != undefined) {
+                            console.log("remove");
+                            circles.data([]).exit().remove();
+                        }
+                        
+                        circles = svg.selectAll(".fieldcircles").
+                            data(data.fields);
+                        
+                        circles.enter().append("circle");
+                        
+                        circles.attr("cx", function(d) { return x(d.ra); })
+                            .attr("cy", function(d) { return y(d.dec); })
+                            .attr("r", function(d) { return r_scaler(d.size); })
+                            .attr("id", function(d) { return "circle" + d._id; })
+                            .style("opacity", 0.3)
+                            .on("mouseover", function (d) {
+                                $("#" + d._id).css("background", "rgba(43, 140, 190, 0.6)");
+                            })
+                            .on("mouseout", function (d) {
+                                $("#" + d._id).css("background", "");
+                            });
+                        
+                        $("#matched_field_list").find("tbody>tr").remove();
+                        var rowTemplate = "<tr id='{0}'><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td></tr>";
+                        for (var ii=0; ii < data.fields.length; ii++) {
+                            var field = data.fields[ii];
+                            field_id = field._id.toString();
+                            $('#matched_field_list tbody').append(rowTemplate.format(field_id, field.ra.toFixed(5), field.dec.toFixed(5), field.number_of_observations)); // (array_max(field.exposures["0"].mjd)-array_min(field.exposures["0"].mjd)).toFixed(1) + " days"));
+                            
+                            $("#" + field_id).mouseover(function (d, i) {
+                                svg.select("#circle" + $(this).attr("id")).style("fill", "rgba(43, 140, 190, 0.6)")
+                                                                          .style("opacity", 0.75)
+                                                                          .attr("stroke", "rgb(153, 40, 40)")
+                                                                          .attr("stroke-width", 4);
+                            });
+                            
+                            $("#" + field_id).mouseout(function (d, i) {
+                                svg.select("#circle" + $(this).attr("id")).style("fill", null)
+                                                                          .style("opacity", 0.3)
+                                                                          .attr("stroke", null);
+                            });
+                        }
+                        
+                        // Draw the colored circle for the search region
+                        searchCircle.attr("cx", 400)
+                                    .attr("cy", 400)
+                                    .attr("r", r_scaler($("#size").val()))
+                                    .style("fill", "rgb(239, 138, 98)")
+                                    .style("opacity", 0.65);
+                        
+                        // Change the axis label
+                        $("#placeholder .footer").text(edge_size.toFixed(2) + " deg");
+                        
+                    }
+                );
+            }
+            
+            // Set initial ra, dec, and size based on URL get params
+            var init_ra_str = "{{ init_ra }}",
+                init_dec_str = "{{ init_dec }}",
+                init_size_str = "{{ init_size }}";
+            
+            console.log("Init RA: " + init_ra_str);
+            console.log("Init Dec: " + init_dec_str);
+            console.log("Init size: " + init_size_str);
+            
+            if (init_ra_str != "") {
+                update_position(init_ra_str, init_dec_str, init_size_str);
+                $("#ra").val(init_ra_str);
+                $("#dec").val(init_dec_str);
+                $("#size").val(init_size_str);
+            }
+        </script>
+    </body>
+</html>
