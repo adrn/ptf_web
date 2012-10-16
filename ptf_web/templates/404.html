@@ -1,8 +1,45 @@
 <html>
   <head>
     <title>Error! Page not found.</title>
+    <style type="text/css">
+        html,body {
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        body {  
+            background: #ccc; /* fallback for non-supporting browsers */  
+            background-image: -webkit-radial-gradient(center center, ellipse contain, #ccc 0%, #666 100%); /* New WebKit syntax */  
+            background-image: -moz-radial-gradient(center center, ellipse contain, #ccc 0%, #666 100%);  
+            background-image: -ms-radial-gradient(center center, ellipse contain, #ccc 0%, #666 100%); /* IE10+ */  
+            background-image: -o-radial-gradient(center center, ellipse contain, #ccc 0%, #666 100%); /* Opera (13?) */  
+        }
+        
+        img, .title, .subtitle {
+            text-align: center;
+            margin: 0 auto;
+            width: 400px;
+            margin-top: 30px;
+        }
+        
+        .title {
+            font-family: Helvetica;
+            color: #943C3A;
+            font-weight:bold;
+            font-size: 114px;
+            text-shadow:0px 0px 0 rgb(228,228,228),1px 1px 0 rgb(210,210,210),2px 2px 0 rgb(193,193,193),3px 3px 0 rgb(175,175,175),4px 4px 0 rgb(158,158,158), 5px 5px 0 rgb(141,141,141),6px 6px 5px rgba(0,0,0,0.6),6px 6px 1px rgba(0,0,0,0.5),0px 0px 5px rgba(0,0,0,.2);
+        }
+        
+        .subtitle {
+            font-size: 22pt;
+            font-family: Helvetica;
+            font-weight:bold;
+            color: #343434;
+        }
+    </style>
   </head>
   <body>
-    <div class="error">Seriously? You're looking for this page? 404!</div>
+    <div class="title">404!<img src="/static/images/kitten.jpg" width=400px/></div>
+    <div class="subtitle">I didn't do it...</div>
   </body>
 </html>
