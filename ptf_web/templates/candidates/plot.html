@@ -191,6 +191,7 @@
             });
             
             // Get SDSS data
+            /*
             var sdss_url = "/search/sdss?ra={{ '{:.5f}'.format(light_curve['ra']) }}&dec={{ '{:.5f}'.format(light_curve['dec']) }}";
             $.ajax({
                 type: "GET",
@@ -222,6 +223,7 @@
                     }
                 }
             });
+            */
             
         });
         
@@ -253,7 +255,8 @@
             <td class="key" width=400px>t<sub>0</sub>: <font class="val" id="t0">{{ "{:.1f}".format(light_curve['microlensing_fit']['t0']) }}</font>,&nbsp;
                 t<sub>E</sub>: <font class="val" id="tE">{{ "{:.2f}".format(light_curve['microlensing_fit']['tE']) }}</font>,&nbsp;
                 u<sub>0</sub>: <font class="val" id="u0">{{ "{:.3f}".format(light_curve['microlensing_fit']['u0']) }}</font>,&nbsp;
-                m<sub>0</sub>: <font class="val" id="m0">{{ "{:.2f}".format(light_curve['microlensing_fit']['m0']) }}</font>
+                m<sub>0</sub>: <font class="val" id="m0">{{ "{:.2f}".format(light_curve['microlensing_fit']['m0']) }}</font><br/>
+                &chi;<sup>2</sup>: <font class="val" id="chisqr">{{ "{:.1f}".format(light_curve['microlensing_fit']['chisqr']) }}</font>
             </td>
             <td width=200px><span id="sdss_colors" class="val"></span></td>
             <td width=200px><span id="simbad_data" class="val"></span></td>

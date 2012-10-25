@@ -38,6 +38,7 @@
             <th>J</th>
             <th>K</th>
             <th>&eta;</th>
+            <th>&chi;<sup>2</sup></th>
             <th>Tags</th>
             <!--<th>RA</th>
             <th>Dec</th>
@@ -57,6 +58,7 @@
                 <th><input type="text" name="search_j" value="Search J" class="search_init" /></th>
                 <th><input type="text" name="search_k" value="Search K" class="search_init" /></th>
                 <th><input type="text" name="search_eta" value="Search eta" class="search_init" /></th>
+                <th><input type="text" name="search_chisqr" value="Search chisqr" class="search_init" /></th>
                 <th><input type="text" name="search_status" value="Search status" class="search_init" /></th>
             </tr>
         </tfoot>        
@@ -86,6 +88,7 @@
                     { "mData" : "indices.j" },
                     { "mData" : "indices.k" },
                     { "mData" : "indices.eta" },
+                    { "mData" : "microlensing_fit.chisqr" },
                     { "mData" : "tags" }
                 ],
                 "aoColumnDefs": [
@@ -119,10 +122,21 @@
                     },
                     {
                         "fnRender": function ( oObj ) {
+                            var s = oObj.aData.microlensing_fit.chisqr; // current value
+                            if (s == undefined) {
+                                return "n/a";
+                            } else {
+                                return parseFloat(s).toFixed(3);
+                            }
+                        },
+                        "aTargets": [ 7 ]
+                    },
+                    {
+                        "fnRender": function ( oObj ) {
                             var s = oObj.aData.tags; // current value
                             return s.join();
                         },
-                        "aTargets": [ 7 ]
+                        "aTargets": [ 8 ]
                     }
                 ],
                 "bPaginate" : false,

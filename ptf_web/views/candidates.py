@@ -68,7 +68,7 @@ def candidate_list():
         sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
     
     # Default is to get Field ID, CCD ID, Source ID
-    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "tags"])
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags"])
     
     raw_candidates = light_curve_collection.find(search, fields=mongo_fields, sort=sort, limit=int(num))
     
