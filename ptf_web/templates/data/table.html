@@ -2,11 +2,11 @@
 
 {% block head %}
     {{ super() }}
-    
+
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='js/datatables/css/jquery.dataTables.css') }}">
     <script src="{{ url_for('static', filename='js/datatables/js/jquery.dataTables.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/datatables/js/dataTables.fnGetHiddenNodes.js') }}"></script>
-    
+
     <script type="text/javascript">
         function toggleUnknown(dataTable) {
                 if ($("#onlyUnknown").attr("checked") == "checked") {
@@ -16,19 +16,54 @@
                 }
             }
     </script>
-    
+
 {% endblock %}
 
 {% block body %}
-    
-    <h2>Candidates</h2>
+
+    <h2>Light Curves</h2>
     <hr width="100px" color="#ccc" size="1px" />
     <br/>
-    <h3>Only show unknown: </h3>
-    <form name="tableConfig" style="display: inline;">
-        <input type="checkbox" id="onlyUnknown" name="onlyUnknown" onChange="toggleUnknown(dataTable);" />
-    </form>
-    
+    {% if field_id %}
+        <form id="inspectedForm" action="/mongo/update_field_inspected">
+            <h3>Inspected</h3>
+            {% if was_inspected == True %}
+                <input type="checkbox" name="inspected" value="1" checked="1"/>
+            {% else %}
+                <input type="checkbox" name="inspected" value="1" />
+            {% endif %}
+            <input type="hidden" name="field_id" value="{{ field_id }}" />
+        </form>
+
+        <script type="text/javascript">
+            $(document).ready(function(){
+
+                $("#inspectedForm").submit(function(){
+                    $.ajax({
+                        type: "POST",
+                        url: "/mongo/update_field_inspected",
+                        data: $("#inspectedForm").serialize(),
+                        dataType: "json",
+
+                        success: function(msg){
+                            //console.log("SUCCESS!");
+                        },
+                        error: function(){
+                            //console.log("ERROR!");
+                        }
+                    });
+
+                    return false;
+
+                });
+
+                $("input[name=inspected]").change(function () {
+                    $('#inspectedForm').submit();
+                });
+            });
+        </script>
+
+    {% endif %}
     <table id="candidateList" cellspacing="0">
         <thead>
             <th>Field ID</th>
@@ -44,11 +79,11 @@
             <th>Dec</th>
             <th>Num. of R-band<Br/>Observations</th>-->
         </thead>
-        
+
         <tbody>
-            
+
         </tbody>
-        
+
         <tfoot>
             <tr>
                 <th><input type="text" name="search_field_id" value="Search fields" class="search_init" /></th>
@@ -61,25 +96,29 @@
                 <th><input type="text" name="search_chisqr" value="Search chisqr" class="search_init" /></th>
                 <th><input type="text" name="search_status" value="Search status" class="search_init" /></th>
             </tr>
-        </tfoot>        
+        </tfoot>
     </table>
 
     <!--<pre><span class=ig>some code!</span></pre>-->
-    
-    <script type="text/javascript">        
+
+    <script type="text/javascript">
         var asInitVals = new Array();
         var dataTable;
-        
+
         var alreadyLinked = false;
-        
+
         $(document).ready(function() {
-            
+
             var ajax_source = "/json/candidate_list";
-            
+
             dataTable = $('#candidateList').dataTable( {
                 "bProcessing": true,
                 "bStateSave": true,
-                "sAjaxSource": '/json/candidate_list',
+                {% if field_id %}
+                "sAjaxSource": '/field/{{ field_id }}',
+                {% elif tag %}
+                "sAjaxSource": '/tagged/{{ tag }}',
+                {% endif %}
                 "aoColumns" : [
                     { "mData" : "field_id" },
                     { "mData" : "ccd_id" },
@@ -144,27 +183,17 @@
                 "oLanguage": {
                     "sSearch": "Search all columns:"
                 },
-                "fnStateSave": function (oSettings, oData) {
-                    // Send an Ajax request to the server with the state object
-                    /*$.ajax( {
-                        "url": "/mongo/save_table_state",
-                        "data": oData,
-                        "dataType": "json",
-                        "method": "POST",
-                        "success": function () {
-                        }
-                    } );*/
-                },
+
                 "fnDrawCallback": function () {
-                    
+
                     if (alreadyLinked == true) {
                         var visibleRows = dataTable.fnGetVisibleNodes();
-                        
+
                         var data = new Array();
                         var field_ids = new Array();
                         var ccd_ids = new Array();
                         var source_ids = new Array();
-                        
+
                         for (var ii=0; ii < visibleRows.length; ii++) {
                             var field_id = visibleRows[ii].children[0].innerText,
                                 ccd_id = visibleRows[ii].children[1].innerText,
@@ -186,9 +215,9 @@
                             }
                         } );
                     }
-                    
+
                     if (alreadyLinked == false) {
-                        
+
                         if ($("#candidateList tbody tr").length > 1) {
                             console.log("In here");
                             $("#candidateList tbody tr").click( function( e ) {
@@ -196,48 +225,48 @@
                                 var field = $(this).children()[0].innerHTML;
                                 var ccd_id = $(this).children()[1].innerHTML;
                                 var source_id = $(this).children()[2].innerHTML;
-                                
+
                                 var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
                                 //window.location = url;
-                                
+
                                 window.open(
                                   url,
                                   '_blank' // <- This is what makes it open in a new window.
                                 );
-                                
+
                             });
-                            
+
                             $("#candidateList tbody tr").mouseover( function(e) {
                                 $(this).attr("oldClass", $(this).attr("class"));
                                 $(this).attr("class", "mouseover");
                                 $(this).css("cursor", "pointer");
                             });
-                            
+
                             $("#candidateList tbody tr").mouseout( function(e) {
                                 $(this).attr("class", $(this).attr("oldClass"));
                                 $(this).css("cursor", "default");
                             });
-                        
+
                             alreadyLinked = true;
                         }
                     }
-                    
+
                 }
             } );
-            
+
             $("tfoot input").keyup( function () {
                 /* Filter on the column (the index) of this element */
                 dataTable.fnFilter( this.value, $("tfoot input").index(this) );
             } );
-             
+
             /*
-             * Support functions to provide a little bit of 'user friendlyness' to the textboxes in 
+             * Support functions to provide a little bit of 'user friendlyness' to the textboxes in
              * the footer
              */
             $("tfoot input").each( function (i) {
                 asInitVals[i] = this.value;
             } );
-             
+
             $("tfoot input").focus( function () {
                 if ( this.className == "search_init" )
                 {
@@ -245,7 +274,7 @@
                     this.value = "";
                 }
             } );
-             
+
             $("tfoot input").blur( function (i) {
                 if ( this.value == "" )
                 {
@@ -253,7 +282,7 @@
                     this.value = asInitVals[$("tfoot input").index(this)];
                 }
             } );
-            
+
         } );
     </script>
 

@@ -36,8 +36,8 @@ def remove_db_session(exception):
 
 from ptf_web.views import general
 app.register_blueprint(general.mod)
-from ptf_web.views import candidates
-app.register_blueprint(candidates.mod)
+from ptf_web.views import data
+app.register_blueprint(data.mod)
 from ptf_web.views import sandbox
 app.register_blueprint(sandbox.mod)
 

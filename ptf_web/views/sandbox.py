@@ -9,7 +9,7 @@ from flaskext.openid import COMMON_PROVIDERS
 import apwlib.geometry as ag
 import numpy as np
 
-import survey_coverage
+import ptf.db.photometric_database as pdb
 import ptf.globals as pg
 from ptf_web import oid, app
 from ptf_web.utils import requires_login, request_wants_json
@@ -75,7 +75,7 @@ def detailed_coverage_json():
     dec = ag.Dec.fromDegrees(str(request.args["dec"]))
     size = ag.Angle.fromDegrees(str(size))
     
-    fields = survey_coverage.get_overlapping_fields(ra.degrees, dec.degrees, filter=filter, size=size.degrees)
+    fields = pdb.get_overlapping_fields(ra.degrees, dec.degrees, filter=filter, size=size.degrees)
     
     mongo_fields = []
     for field in fields:

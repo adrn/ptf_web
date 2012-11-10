@@ -2,21 +2,21 @@
 
 {% block head %}
     {{ super() }}
-    
+
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.0/jquery.min.js"></script>
     <script src="{{ url_for('static', filename='js/graph/js/jquery.graph.js') }}"></script>
-    
+
     <script type="text/javascript">
         /* Misc. Useful functions */
         function roundNumber(num, dec) {
             var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
             return result;
         }
-        
+
         array_max = function( array ){
             return Math.max.apply( Math, array );
         };
-        
+
         array_min = function( array ){
             return Math.min.apply( Math, array );
         };
@@ -24,53 +24,53 @@
         String.prototype.format = String.prototype.f = function() {
             var s = this,
                 i = arguments.length;
-        
+
             while (i--) {
                 s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
             }
             return s;
         };
-        
+
         function log10(val) {
             return Math.log(val) / Math.log(10);
         }
-        
+
         /* -------------------------------------------------- */
-        
+
         function setNextPreviousLinks(data) {
             var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]),
                 next_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.next[0], data.next[1], data.next[2]);
-            
+
             $("#previousLightCurve").attr("href", previous_url);
             $("#nextLightCurve").attr("href", next_url);
         }
-        
+
         function showPTFImage(thing) {
             var mjd = $(thing).attr("mjd");
-            
+
             show_ptf_loading();
-            
+
             // Set PTF image link
             var ptfImageURL = "/ptfimage?field_id={{ light_curve['field_id'] }}&ccd_id={{ light_curve['ccd_id'] }}&source_id={{ light_curve['source_id'] }}&mjd=" + mjd;
             $("#ptfImage").attr("src", ptfImageURL);
         }
-        
+
         // some globals for plotting
-        var PLOT_DATA_POINTS, 
+        var PLOT_DATA_POINTS,
             graph,
             t0, tE, m0, u0;
-        
+
         // Define some plot options
         var options = {
             xaxis:{ label:'Day (MJD - Epoch)' },
             yaxis: { label: 'R (mag)' }
         };
-        
+
         function draw_plot(data) {
             show_model = $("#show_model").is(":checked");
-            
+
             var dataset = [];
-            
+
             var plot_data = [];
             for (ii in data.light_curve.mjd) {
                 plot_data[ii] = {"x" : data.light_curve.mjd[ii], "y" : -data.light_curve.mag[ii], "err" : data.light_curve.error[ii]};
@@ -80,33 +80,33 @@
                           color: "#1E67BA",
                           points: { show: true, radius: 3 },
                           lines: { show: false, width: 2 },
-                          hoverable: true, 
+                          hoverable: true,
                           clickable: true,
                           hover : {
                             after : "<br/><a name='showPTFImage' mjd={{ '{{ x }}' }} onClick='showPTFImage(this);'>Show Image</a>"
                           }
                          });
-            
+
             if (show_model == true) {
                 // Compute model line
-            
+
                 function model(t) {
                     u = Math.sqrt(u0*u0 + Math.pow( ((t-t0)/tE), 2));
                     Au = (u*u + 2) / (u*Math.sqrt(u*u + 4));
                     y = m0 - 2.5*log10(Au);
                     return y;
                 }
-                
+
                 var mjd_min = array_min(data.light_curve.mjd),
                     mjd_max = array_max(data.light_curve.mjd),
                     num_points = 500;
-                
+
                 var delta = (mjd_max - mjd_min) / num_points;
                 var model_data = new Array();
                 for (var mjd=mjd_min; mjd <= (mjd_max+delta); mjd += delta) {
                     model_data.push({"x" : mjd, "y" : -model(mjd)});
                 }
-                
+
                 dataset.push({data : model_data,
                               color: "#ff0000",
                               points: { show: false, radius: 1 },
@@ -115,7 +115,7 @@
             } else {
                 dataset = dataset[0];
             }
-            
+
             console.log(dataset);
             // Setup the graph
             if (graph == undefined) {
@@ -123,37 +123,37 @@
             } else {
                 graph.updateData(dataset)
             }
-        
+
         }
-        
+
         function dataReceived(data) {
             // TODO: Load preference from user's configuration
             PLOT_DATA_POINTS = data;
-            
+
             t0 = parseFloat("{{ light_curve['microlensing_fit']['t0'] }}");
             u0 = parseFloat("{{ light_curve['microlensing_fit']['u0'] }}");
             tE = parseFloat("{{ light_curve['microlensing_fit']['tE'] }}");
             m0 = parseFloat("{{ light_curve['microlensing_fit']['m0'] }}");
-            
+
             // Set data-dependent fields
             var baseline = array_max(data.light_curve.mjd) - array_min(data.light_curve.mjd);
             $("#baseline").text("" + parseInt(baseline) + " days");
-            
+
             // Set SDSS link url
             var sdssURL = "http://cas.sdss.org/dr7/en/tools/search/x_radial.asp?ra={0}&dec={1}&radius=0.15&format=html&topnum=20".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssLink").attr("href", sdssURL);
-            
+
             // Set SIMBAD link url
             var simbadURL = "http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={0}%20{1}&Radius=10&Radius.unit=arcsec".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#simbadLink").attr("href", simbadURL);
-            
+
             // Set SDSS image link
-            var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=40&height=40".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
+            var sdssImageURL = "http://casjobs.sdss.org/ImgCutoutDR7/getjpeg.aspx?ra={0}&dec={1}&width=25&height=25".format(data.light_curve.ra.toFixed(7), data.light_curve.dec.toFixed(7));
             $("#sdssImage").attr("src", sdssImageURL);
-            
+
             draw_plot(PLOT_DATA_POINTS, true);
         }
-        
+
         $(document).ready(function() {
             // Get light curve data for plot
             $.ajax({
@@ -163,7 +163,7 @@
                 dataType: "json",
                 success: dataReceived
             });
-            
+
             // Set the previous and next link buttons
             $.ajax({
                 type: "GET",
@@ -172,9 +172,10 @@
                 dataType: "json",
                 success: setNextPreviousLinks
             });
-            
+
+            /*
             var simbad_url = "/search/simbad?ra={{ '{:.5f}'.format(light_curve['ra']) }}&dec={{ '{:.5f}'.format(light_curve['dec']) }}";
-            
+
             // Load information from SIMBAD through my cgi script
             $.ajax({
                 type: "GET",
@@ -189,7 +190,8 @@
                     }
                 }
             });
-            
+            */
+
             // Get SDSS data
             /*
             var sdss_url = "/search/sdss?ra={{ '{:.5f}'.format(light_curve['ra']) }}&dec={{ '{:.5f}'.format(light_curve['dec']) }}";
@@ -203,44 +205,44 @@
                         $('#sdss_colors').append("none");
                         return;
                     }
-                    
+
                     var filters = ['u','g','r','i','z'],
                         psf_mags = {};
                     for(var i = 0; i < 5; i++) {
                         psf_mags[filters[i]] = roundNumber(data[filters[i]+'Psf'][0],3);
                         //$('#sdss_colors').append(filters[i]+"': " + roundNumber(data[filters[i]+'Mod'][0],2) + " &pm; " + roundNumber(data[filters[i]+'Mod'][1],2) + "<br>");
                     }
-                    
+
                     $('#sdss_colors').append("<font class='key'>Type:</font> <font class='val'>" + (data.type == 6 ? 'Star' : (data.type==3?'Galaxy' : 'Unknown'))+'</font><br>');
                     $('#sdss_colors').append("<font class='key'>Dist:</font> <font class='val'>" + roundNumber(data.dist*3600, 2) + '"</font>');
-                    
+
                     // Richards QSO cut
-                    if (( (psf_mags.g - psf_mags.r) > -0.2) && ( (psf_mags.g - psf_mags.r) < 0.9) && 
-                       ( (psf_mags.r - psf_mags.i) > -0.2) && ( (psf_mags.r - psf_mags.i) < 0.6) && 
-                       ( (psf_mags.i - psf_mags.z) > -0.15) && ( (psf_mags.i - psf_mags.z) < 0.5) && 
+                    if (( (psf_mags.g - psf_mags.r) > -0.2) && ( (psf_mags.g - psf_mags.r) < 0.9) &&
+                       ( (psf_mags.r - psf_mags.i) > -0.2) && ( (psf_mags.r - psf_mags.i) < 0.6) &&
+                       ( (psf_mags.i - psf_mags.z) > -0.15) && ( (psf_mags.i - psf_mags.z) < 0.5) &&
                        ( psf_mags.i > 17) && ( psf_mags.i < 19.1)) {
                         $('#sdss_qso').append("<font class='val' style='color: red'>QSO</font>");
                     }
                 }
             });
             */
-            
+
         });
-        
+
         function hide_ptf_loading() {
             $("#ptfImageText").css("display", "none");
             $("#ptfLoader").css("display", "none");
             $("#ptfImage").css("display", "block");
         }
-        
+
         function show_ptf_loading() {
             $("#ptfLoader").css("display", "block");
-            $("#ptfImage").css("display", "none");        
+            $("#ptfImage").css("display", "none");
         }
-        
+
     </script>
-               
-    
+
+
 {% endblock %}
 
 {% block body %}
@@ -250,6 +252,7 @@
             <th>SDSS <a target="_blank" id="sdssLink">(open)</a> <span id="sdss_qso"></span></th>
             <th>SIMBAD <a target="_blank" id="simbadLink">(open)</a></th>
             <th>PTF <a target="_blank" href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}%20{{ "{:.5f}".format(light_curve['dec']) }}&radius=3">(open)</a></th>
+            <th>SDSS Image</th>
         </tr>
         <tr class="titles">
             <td class="key" width=400px>t<sub>0</sub>: <font class="val" id="t0">{{ "{:.1f}".format(light_curve['microlensing_fit']['t0']) }}</font>,&nbsp;
@@ -261,9 +264,9 @@
             <td width=200px><span id="sdss_colors" class="val"></span></td>
             <td width=200px><span id="simbad_data" class="val"></span></td>
             <td width=200px></td>
-            <td width=200px></td>
+            <td width=200px><img id="sdssImage" width="75" height="75" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" /></td>
             <td rowspan=2 align="center" valign="top">
-                
+
                 <a id="previousLightCurve">Previous</a> | <a id="nextLightCurve">Next</a>
                 <br/><br/>
                 <form method="get">
@@ -271,7 +274,7 @@
                     <input type="hidden" name="ccd_id" value="{{ light_curve['ccd_id'] }}" />
                     <input type="hidden" name="source_id" value="{{ light_curve['source_id'] }}" />
                     <input type="hidden" name="set_tags" value="true" />
-                    <ul class="tagList" style="height: 340px; overflow: scroll;">
+                    <ul class="tagList" style="height: 500px; overflow: scroll;">
                     {% for tag in all_tags %}
                         {% if tag in light_curve['tags'] %}
                             <li class='clicked'><input type="checkbox" name="tags" onChange="this.form.submit();" value="{{ tag }}" checked="checked" />
@@ -283,16 +286,12 @@
                         <li><input type="text" name="new_tag" size=15 placeholder="e.g. rr lyrae"/><input type="submit" value="Add new tag"/></li>
                     </ul>
                 </form>
-                
+
                 <br/>
                 <hr width="75%"/>
                 <br/>
-                
-                SDSS Image<br/>
-                <img id="sdssImage" width="200" height="200" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
-                <br/><br/>
                 PTF Image<br/>
-                <span id="ptfImageText" style="color: #aaa;"><i>Hover data point to load image</i></span>
+                <span id="ptfImageText" style="color: #aaa;"><i>Hover data points</i></span>
                 <img id="ptfLoader" style="display: none;" src="{{ url_for('static', filename='images/ajax-loader.gif') }}" />
                 <img id="ptfImage" style="display: none;" height="200px" onload="hide_ptf_loading();" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" />
             </td>
@@ -306,14 +305,14 @@
             <td align="center"></td>
         </tr>
     </table>
-    
+
     <br/>
     <h2>More info:</h2>
     <ul id="more_info" style="margin-top: 10px;">
         <li><font class="val" id="numObservations">{{ light_curve['mjd']|length }}</font> <font class="key">observations over</font> <font class="val" id="baseline"></font></li>
     </ul>
     <!--<input id="reset" type="button" value="Reset axes" />-->
-        
+
     <!--<pre><span class=ig>some code!</span></pre>-->
 
 <!--<a href="http://github.com/mitsuhiko/flask"><img style="position: fixed; top: 0; right: 0; border: 0;"

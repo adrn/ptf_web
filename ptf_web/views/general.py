@@ -33,71 +33,72 @@ def ptfimage():
     """ Returns a JPG PTF image """
     if not request.args.has_key("source_id") or not request.args.has_key("field_id") or not request.args.has_key("ccd_id"):
         abort(404)
-    
+
     light_curve = get_light_curve_from_collection(int(request.args["field_id"]), int(request.args["ccd_id"]), int(request.args["source_id"]), light_curve_collection)
-    
+
     try:
         mjd = float(request.args["mjd"])
     except:
         mjd = light_curve.mjd[0]
-    
+
     ra = light_curve.ra
     dec = light_curve.dec
-    
+    size = 2.5 # arcseconds
+
     # http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS=12.5432151118,40.1539468896&size=0.005&columns=pfilename&where=obsmjd=55398.33127
-    url = "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={0},{1}&SIZE={2}&columns=pfilename&where=obsmjd={3:.5f}".format(ra, dec, 10./3600., mjd)
-    
+    url = "http://kanaloa.ipac.caltech.edu/ibe/search/ptf/dev/process?POS={0},{1}&SIZE={2}&columns=pfilename&where=obsmjd={3:.5f}".format(ra, dec, size/3600., mjd)
+
     http_request = urllib2.Request(url)
     base64string = base64.encodestring("%s:%s" % (ptf_user, ptf_password)).replace('\n', '')
     http_request.add_header("Authorization", "Basic %s" % base64string)
     file = StringIO.StringIO(urllib2.urlopen(http_request).read())
     filename = np.genfromtxt(file, skiprows=4, usecols=[3], dtype=str)
-    
+
     fits_image_url = os.path.join(app.config['IPAC_DATA_URL'], str(filename))
-    
+
     http_request = urllib2.Request(fits_image_url + "?center={0},{1}&size=50px".format(ra,dec))
     base64string = base64.encodestring('%s:%s' % (ptf_user, ptf_password)).replace('\n', '')
     http_request.add_header("Authorization", "Basic %s" % base64string)
-    
+
     try:
         f = StringIO.StringIO(urllib2.urlopen(http_request).read())
     except urllib2.HTTPError:
         flash("Error downloading image!")
-        return 
-    
+        return
+
     try:
         gz = gzip.GzipFile(fileobj=f, mode="rb")
         gz.seek(0)
-        
+
         fitsFile = StringIO.StringIO(gz.read())
     except IOError:
         fitsFile = f
-    
+
     fitsFile.seek(0)
-    
+
     hdulist = pf.open(fitsFile, mode="readonly")
-    
+
     image_data = hdulist[0].data
+
+    x_size, y_size = image_data.shape
+    center_of_image = image_data[x_size/2.-2:x_size/2.+2, y_size/2.-2:y_size/2.+2]
+    im_max, im_min = center_of_image.max(), center_of_image.min()
     scaled_image_data = (255*(image_data - image_data.min()) / (image_data.max() - image_data.min())).astype(np.uint8)
-    
+    #scaled_image_data = (255*(image_data - im_min) / (im_max - im_min)).astype(np.uint8)
+
     image = Image.fromarray(scaled_image_data)
-    
+
     output = StringIO.StringIO()
     image.save(output, format="png")
-    #image.save(open("test.png", "w"), format="png")
-    
-    #contents = output.getvalue()
-    #output.close()
-    
     output.seek(0)
-    
+
     #print 'Content-Type:image/png\n'
     return send_file(output, mimetype="image/png")
 
 @mod.route('/json/field', methods=["GET"])
 def field_data():
     """ Load field information from MongoDB """
-    
+
     search = {}
     search["_id"] = int(request.args["id"])
     field = field_collection.find_one(search)
@@ -131,12 +132,12 @@ def login():
     """ Does the login via OpenID.  Has to call into `oid.try_login`
         to start the OpenID machinery.
     """
-    
+
     # APW: ENABLE THIS TO ACCEPT ALL OpenID Providers
     #   -> You have to create logos for all of them though!
     #providers = COMMON_PROVIDERS
     providers = {"google" : COMMON_PROVIDERS["google"]}
-    
+
     if g.user is not None:
         return redirect(url_for('general.index'))
     if 'cancel' in request.form:
@@ -157,10 +158,10 @@ def login():
 def first_login():
     with open(os.path.join(app.config['BASEDIR'], "allowed_openids")) as f:
         allowed_openids = [x.strip() for x in f.readlines()]
-    
+
     with open(os.path.join(app.config['BASEDIR'], "allowed_emails")) as f:
         allowed_emails = [x.strip() for x in f.readlines()]
-    
+
     if g.user is not None or 'openid' not in session:
         return redirect(url_for('.login'))
     if request.method == 'POST':
@@ -168,12 +169,12 @@ def first_login():
             del session['openid']
             flash(u'Login was aborted')
             return redirect(url_for('general.login'))
-        
+
         if (session['openid'] not in allowed_openids) and (request.form["email"] not in allowed_emails):
             flash(u"Unauthorized user.")
             del session['openid']
             return redirect(url_for('general.logout'))
-        
+
         db_session.add(User(request.form['name'], session['openid'], request.form["email"]))
         db_session.commit()
         flash(u'Successfully created profile and logged in!')
@@ -201,14 +202,14 @@ def profile():
 def create_or_login(resp):
     with open(os.path.join(app.config['BASEDIR'], "allowed_openids")) as f:
         allowed_openids = [x.strip() for x in f.readlines()]
-    
+
     session['openid'] = resp.identity_url
-    
+
     #if session['openid'] not in allowed_openids:
     #    flash(u"Unauthorized user.")
     #    del session['openid']
     #    return redirect(url_for('general.logout'))
-    
+
     user = g.user or User.query.filter_by(openid=resp.identity_url).first()
     if user is None:
         print "\n\n\n resp email: {} \n\n\n".format(resp.email)
@@ -229,32 +230,32 @@ def search_simbad():
         dec = request.args["dec"]
     except:
         return "Invalid RA and Dec!"
-    
+
     if float(dec) > 0:
         dec = "+{}".format(dec)
-        
+
     url = "http://simbad.u-strasbg.fr/simbad/sim-coo?output.format=ASCII&Coord=" + ra + dec + "&Radius=1&Radius.unit=arcmin&otypedisp=V"
     try:
         simbadreq = urllib.urlopen(url)
         data = simbadreq.read().split('\n')
-        
+
         if data[0].startswith('!! No astronomical object found'):
             return jsonify({})
         else:
             pattr = re.compile("Coordinates\(ICRS,ep=J2000,eq=2000\): ([0-9]{2}\s[0-9]{2}\s[0-9\.]+)\s+([\-0-9]+ \d\d [0-9\.]+)")
-            
+
             for line in data:
                 grps = pattr.search(line)
                 if grps != None:
                     ra,dec = grps.groups()
                     break
-                    
+
     except:
         return "Invalid RA and Dec!" # failed to send request
-    
+
     ra = g.RA.fromDegrees(str(ra))
     dec = g.Dec(str(dec))
-    
+
     return jsonify({"ra" : ra.degrees, "dec" : dec.degrees})
 
 @mod.route("/search/sdss", methods=["GET", "POST"])
@@ -264,15 +265,15 @@ def search_sdss():
         dec = request.args["dec"]
     except:
         return "Invalid RA and Dec!"
-    
+
     username = 'adrian'
     password = 'lateralus0'
     cj = cookielib.CookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
     login_data = urllib.urlencode({'username' : username, 'password' : password})
     opener.open('http://navtara.caltech.edu/galactic/marshal/login.php', login_data)
-    
+
     url = "http://navtara.caltech.edu/cgi-bin/ptf/galactic/get_sdss.cgi?ra={}&dec={}".format(ra,dec)
     resp = opener.open(url)
-    
+
     return jsonify(json.loads(resp.read()))

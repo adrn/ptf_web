@@ -34,7 +34,7 @@
         <div id="menu">
             <ul class="navigation">
                 <li><a href="{{ url_for('general.index') }}">home</a>&nbsp;&nbsp;//</li>
-                <li><a href="{{ url_for('candidates.index') }}">candidates</a>&nbsp;&nbsp;//</li>
+                <li><a href="{{ url_for('data.index') }}">data</a>&nbsp;&nbsp;//</li>
                 {% if g.user %}
                     <li><a href="{{ url_for('general.profile') }}">profile</a>&nbsp;&nbsp;//</li>
                     <li><a href="{{ url_for('general.logout') }}">sign out</a>&nbsp;&nbsp;<span class="info">Logged in as: [{{ g.user.name }}]</span></li>

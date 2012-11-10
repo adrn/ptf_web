@@ -1,4 +1,4 @@
-/* Global HTML 
+/* Global HTML
 ======================================================================== */
 
 * {
@@ -57,6 +57,12 @@ h3 {
     display: inline;
 }
 
+hr {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    color: #ddd;
+}
+
 /* Layout
 ======================================================================== */
 
@@ -65,7 +71,7 @@ h3 {
     background: #fff;
     border-top-left-radius: 10px 5px;
     border-top-right-radius: 10px 5px;
-    
+
     padding-top: 10px;
     padding-bottom: 10px;
 }
@@ -94,6 +100,22 @@ h3 {
     padding: 10px;
     border-left: 2px solid #ddd;
     background: #fff;
+}
+
+/* For data/index.html */
+div.column {
+    float: left;
+    width: 25%;
+}
+
+div#field_list {
+    height: 600px;
+    padding: 15px;
+    overflow: scroll;
+    border-radius: 12px;
+    -moz-box-shadow:    inset 0 0 10px #000000;
+    -webkit-box-shadow: inset 0 0 10px #000000;
+    box-shadow:         inset 0 0 10px #000000;
 }
 
 /* Flash messages
@@ -208,7 +230,7 @@ table.info tr.titles td.last {
 .openid_logo:hover {
     border: 2px #0000ff solid;
     cursor: pointer;
-    
+
     -moz-box-shadow: -2px 2px 5px #888;
     -webkit-box-shadow: -2px 2px 5px #888;
     box-shadow: -2px 2px 5px #888;
@@ -226,7 +248,7 @@ input[type=submit] {
 	font: 20px/100% Arial, Helvetica, sans-serif;
 	padding: 10px;
 	text-shadow: 0 1px 1px rgba(0,0,0,.3);
-	-webkit-border-radius: .5em; 
+	-webkit-border-radius: .5em;
 	-moz-border-radius: .5em;
 	border-radius: .5em;
 	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
@@ -254,10 +276,10 @@ input[type=submit].interesting {
     font-size: 18pt;
     font-weight: bolt;
     font-family: Helvetica neue;
-    
+
     padding-top: 8px;
     padding-bottom: 8px;
-    
+
     -webkit-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
 	-moz-box-shadow: 2px 2px 4px rgba(0,0,0,.6);
 	box-shadow: 2px 2px 4px rgba(0,0,0,.6);
@@ -282,4 +304,16 @@ ul#more_info {
 
 ul#more_info li {
     margin-left: 30px;
+}
+
+
+
+
+
+a.inspected_False {
+    font-weight: bold;
+}
+a.inspected_True {
+    font-style: italic;
+    color: #888;
 }
