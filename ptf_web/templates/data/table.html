@@ -66,25 +66,36 @@
     {% endif %}
     <table id="candidateList" cellspacing="0">
         <thead>
-            <th>Field ID</th>
-            <th>CCD ID</th>
-            <th>Source ID</th>
-            <th>&Delta;&chi;<sup>2</sup></th>
-            <th>J</th>
-            <th>K</th>
-            <th>&eta;</th>
-            <th>&chi;<sup>2</sup></th>
-            <th>Tags</th>
-            <!--<th>RA</th>
-            <th>Dec</th>
-            <th>Num. of R-band<Br/>Observations</th>-->
+            <tr>
+                <th>Field ID</th>
+                <th>CCD ID</th>
+                <th>Source ID</th>
+                <th>&Delta;&chi;<sup>2</sup></th>
+                <th>J</th>
+                <th>K</th>
+                <th>&eta;</th>
+                <th>&chi;<sup>2</sup></th>
+                <th>Tags</th>
+                <th>Viewed</th>
+                <!--<th>RA</th>
+                <th>Dec</th>
+                <th>Num. of R-band<Br/>Observations</th>-->
+            </tr>
+            <tr>
+                <th><input type="text" name="search_field_id" placeholder="Search fields" class="search_init" /></th>
+                <th><input type="text" name="search_ccd_id" placeholder="Search ccds" class="search_init" /></th>
+                <th><input type="text" name="search_source_id" placeholder="Search sources" class="search_init" /></th>
+                <th><input type="text" name="search_delta_chi_sq" placeholder="Search " class="search_init" /></th>
+                <th><input type="text" name="search_j" placeholder="Search J" class="search_init" /></th>
+                <th><input type="text" name="search_k" placeholder="Search K" class="search_init" /></th>
+                <th><input type="text" name="search_eta" placeholder="Search eta" class="search_init" /></th>
+                <th><input type="text" name="search_chisqr" placeholder="Search chisqr" class="search_init" /></th>
+                <th><input type="text" name="search_status" placeholder="Search status" class="search_init" /></th>
+                <th><input type="text" name="search_status" placeholder="Search viewed" class="search_init" /></th>
+            </tr>
         </thead>
 
-        <tbody>
-
-        </tbody>
-
-        <tfoot>
+        <!--<tfoot>
             <tr>
                 <th><input type="text" name="search_field_id" value="Search fields" class="search_init" /></th>
                 <th><input type="text" name="search_ccd_id" value="Search ccds" class="search_init" /></th>
@@ -95,8 +106,14 @@
                 <th><input type="text" name="search_eta" value="Search eta" class="search_init" /></th>
                 <th><input type="text" name="search_chisqr" value="Search chisqr" class="search_init" /></th>
                 <th><input type="text" name="search_status" value="Search status" class="search_init" /></th>
+                <th><input type="text" name="search_status" value="Search viewed" class="search_init" /></th>
             </tr>
-        </tfoot>
+        </tfoot>-->
+
+        <tbody>
+
+        </tbody>
+
     </table>
 
     <!--<pre><span class=ig>some code!</span></pre>-->
@@ -128,7 +145,8 @@
                     { "mData" : "indices.k" },
                     { "mData" : "indices.eta" },
                     { "mData" : "microlensing_fit.chisqr" },
-                    { "mData" : "tags" }
+                    { "mData" : "tags" },
+                    { "mData" : "viewed" }
                 ],
                 "aoColumnDefs": [
                     {
@@ -218,16 +236,13 @@
 
                     if (alreadyLinked == false) {
 
-                        if ($("#candidateList tbody tr").length > 1) {
-                            console.log("In here");
+                        if (($("#candidateList tbody tr").length >= 1) && ($("#candidateList tbody tr").children()[0].innerHTML != "Loading...")) {
                             $("#candidateList tbody tr").click( function( e ) {
-                                //console.log($(this).children()[0].innerHTML);
                                 var field = $(this).children()[0].innerHTML;
                                 var ccd_id = $(this).children()[1].innerHTML;
                                 var source_id = $(this).children()[2].innerHTML;
 
                                 var url = "/candidates/plot?field_id=" + field + "&ccd_id=" + ccd_id + "&source_id=" + source_id;
-                                //window.location = url;
 
                                 window.open(
                                   url,

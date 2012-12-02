@@ -227,6 +227,46 @@
             });
             */
 
+            $(document).keypress(function(event){
+            	var keycode = (event.keyCode ? event.keyCode : event.which);
+            	if(keycode == '110'){
+            	    if ($("input[value='not interesting']").is(':checked')) {
+                	   $("input[value='not interesting']").prop('checked', false);
+            	    } else {
+                	    $("input[value='not interesting']").prop('checked', true);
+            	    }
+            	    $("input[value='not interesting']").change();
+            	} else if (keycode == '113') {
+            	    if ($("input[value='qso']").is(':checked')) {
+                	   $("input[value='qso']").prop('checked', false);
+            	    } else {
+                	    $("input[value='qso']").prop('checked', true);
+            	    }
+            	    $("input[value='qso']").change();
+            	} else if (keycode == '98') {
+            	    if ($("input[value='bad data']").is(':checked')) {
+                	   $("input[value='bad data']").prop('checked', false);
+            	    } else {
+                	    $("input[value='bad data']").prop('checked', true);
+            	    }
+            	    $("input[value='bad data']").change();
+            	} else if (keycode == '118') {
+            	    if ($("input[value='variable star']").is(':checked')) {
+                	   $("input[value='variable star']").prop('checked', false);
+            	    } else {
+                	    $("input[value='variable star']").prop('checked', true);
+            	    }
+            	    $("input[value='variable star']").change();
+            	} else if (keycode == '99') {
+            	    if ($("input[value='candidate']").is(':checked')) {
+                	   $("input[value='candidate']").prop('checked', false);
+            	    } else {
+                	    $("input[value='candidate']").prop('checked', true);
+            	    }
+            	    $("input[value='candidate']").change();
+            	}
+            });
+
         });
 
         function hide_ptf_loading() {
@@ -251,7 +291,7 @@
             <th>Microlensing Model (show <input type="checkbox" id="show_model" onChange="draw_plot(PLOT_DATA_POINTS);" />)</th>
             <th>SDSS <a target="_blank" id="sdssLink">(open)</a> <span id="sdss_qso"></span></th>
             <th>SIMBAD <a target="_blank" id="simbadLink">(open)</a></th>
-            <th>PTF <a target="_blank" href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}%20{{ "{:.5f}".format(light_curve['dec']) }}&radius=3">(open)</a></th>
+            <th>PTF <a target="_blank" href="http://navtara.caltech.edu/galactic/marshal/search_db.php?coords={{ "{:.5f}".format(light_curve['ra']) }}+{{ "{:.5f}".format(light_curve['dec']) }}&radius=3&ra={{ "{:.5f}".format(light_curve['ra']) }}&dec={{ "{:.5f}".format(light_curve['dec']) }}">(open)</a></th>
             <th>SDSS Image</th>
         </tr>
         <tr class="titles">
@@ -263,7 +303,11 @@
             </td>
             <td width=200px><span id="sdss_colors" class="val"></span></td>
             <td width=200px><span id="simbad_data" class="val"></span></td>
-            <td width=200px></td>
+            <td width=200px>
+                {% if not light_curve.has_key("viewed") or not light_curve["viewed"] %}
+                    <font color="red">**NEW**</font>
+                {% endif %}
+            </td>
             <td width=200px><img id="sdssImage" width="75" height="75" onerror="this.src='{{ url_for('static', filename='images/no-image.jpg') }}';" /></td>
             <td rowspan=2 align="center" valign="top">
 
@@ -274,7 +318,7 @@
                     <input type="hidden" name="ccd_id" value="{{ light_curve['ccd_id'] }}" />
                     <input type="hidden" name="source_id" value="{{ light_curve['source_id'] }}" />
                     <input type="hidden" name="set_tags" value="true" />
-                    <ul class="tagList" style="height: 500px; overflow: scroll;">
+                    <ul class="tagList" style="height: 550px; overflow: scroll;">
                     {% for tag in all_tags %}
                         {% if tag in light_curve['tags'] %}
                             <li class='clicked'><input type="checkbox" name="tags" onChange="this.form.submit();" value="{{ tag }}" checked="checked" />

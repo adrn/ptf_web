@@ -50,12 +50,20 @@ def tagged(tag_name):
     if tag_name == "none":
         tag_name = []
 
+    print "IN HERE!!"
+
     # Default is to get Field ID, CCD ID, Source ID
-    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags"])
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags", "viewed"])
     sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
     light_curves = light_curve_collection.find({"tags" : tag_name}, fields=mongo_fields, sort=sort)
 
-    return jsonify(aaData=[dict(light_curve) for light_curve in light_curves])
+    retrieved = []
+    for lc in light_curves:
+        if not lc.has_key("viewed"):
+            lc["viewed"] = False
+        retrieved.append(dict(lc))
+
+    return jsonify(aaData=retrieved)
 
 @mod.route('/field/<field_id>', methods=["GET"])
 @requires_login
@@ -65,11 +73,17 @@ def field(field_id):
         return jsonify(aaData=[])
 
     # Default is to get Field ID, CCD ID, Source ID
-    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags"])
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags", "viewed"])
     sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
     light_curves = light_curve_collection.find({"field_id" : int(field_id)}, fields=mongo_fields, sort=sort)
 
-    return jsonify(aaData=[dict(light_curve) for light_curve in light_curves])
+    retrieved = []
+    for lc in light_curves:
+        if not lc.has_key("viewed"):
+            lc["viewed"] = False
+        retrieved.append(dict(lc))
+
+    return jsonify(aaData=retrieved)
 
 @mod.route('/json/candidate_list', methods=["GET"])
 @requires_login
@@ -96,9 +110,12 @@ def candidate_list():
         sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
 
     # Default is to get Field ID, CCD ID, Source ID
-    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags"])
+    mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags", "viewed"])
 
     raw_candidates = light_curve_collection.find(search, fields=mongo_fields, sort=sort, limit=int(num))
+    for cand in raw_candidates:
+        if not cand.has_key("viewed"):
+            cand["viewed"] = False
 
     candidates = []
     for c in list(raw_candidates):
@@ -129,6 +146,12 @@ def field_list():
         field_data = dict()
         field_data["field_id"] = field_id
         field_data["num_rband"] = len(field_document["exposures"][field_document["exposures"].keys()[0]]["mjd"])
+
+        vieweds = list(light_curve_collection.find({"field_id" : int(field_id)}, fields=["viewed"]))
+        vieweds = np.array([lcd["viewed"] if lcd.has_key("viewed") else False for lcd in vieweds])
+
+        field_data["num_viewed"] = str(sum(vieweds))
+        field_data["num_total"] = str(len(vieweds))
         fields.append(field_data)
 
     return jsonify(aaData=fields)
@@ -196,7 +219,7 @@ def plot():
                 if "variable star" in tags:
                     tags.pop(tags.index("variable star"))
 
-            if "bad data" in tags:
+            if "bad data" in tags or "not interesting" in tags:
                 if "candidate" in tags:
                     tags.pop(tags.index("candidate"))
 
@@ -204,7 +227,13 @@ def plot():
                 update_light_curve_document_tags(lc_document, tags, light_curve_collection)
 
     lc_document = light_curve_collection.find_one({"field_id" : field_id, "ccd_id" : ccd_id, "source_id" : source_id})
-    return render_template('data/plot.html', light_curve=lc_document, all_tags=sorted(light_curve_collection.distinct("tags")))
+    if not lc_document.has_key("viewed") or not lc_document["viewed"]:
+        first_view = True
+        light_curve_collection.update({"field_id" : field_id, "ccd_id" : ccd_id, "source_id" : source_id}, {"$set" : {"viewed" : True}})
+    else:
+        first_view = False
+
+    return render_template('data/plot.html', light_curve=lc_document, all_tags=sorted(light_curve_collection.distinct("tags")), first_view=first_view)
 
 @mod.route('/mongo/update_field_inspected', methods=["POST"])
 @requires_login
