@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+
+{% block head %}
+    {{ super() }}
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.0/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='js/graph/js/jquery.graph.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='js/datatables/css/jquery.dataTables.css') }}">
+    <script src="{{ url_for('static', filename='js/datatables/js/jquery.dataTables.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/datatables/js/dataTables.fnGetHiddenNodes.js') }}"></script>
+
+{% endblock %}
+
+{% block body %}
+    <div class="column">
+        <h2>Tags</h2>
+        <hr width="100px" color="#888" size=1px />
+        {% for href_tag,text_tag in all_tags %}
+            <a href="/data/table/tag/{{ href_tag }}">{{text_tag}}</a><br/>
+        {% endfor %}
+        <a href="/data/table/tag/none" style="color: #880500;">Unclassified</a><br/>
+    </div>
+
+    <div class="column_spacer">
+    </div>
+
+    <div class="column" style="width: 60%;">
+        <h2>Fields</h2>
+        <form id="field_form" action="/data/table/field">
+            <input type="text" size=15 name="id" id="field_id" placeholder="e.g. 4721" />
+            <input type="submit" value="Go" />
+        </form>
+        <hr width="100px" color="#888" size=1px />
+
+        <!--<div id="field_list">
+            {% for field_document in fields %}
+                <a href="/data/table/field/{{ field_document['_id'] }}" class="inspected_{{field_document['inspected']}}">{{field_document['_id']}}</a> ({{field_document["exposures"][field_document["exposures"].keys()[0]]["mjd"]|length}})
+                <br/>
+            {% endfor %}
+        </div>
+        -->
+        <table id="fieldList" cellspacing="0">
+            <thead>
+                <th>Field ID</th>
+                <th>Num. of R-band<Br/>Observations</th>
+                <th>Viewed</th>
+                <th>Num. Var Stars</th>
+                <th>Num. Candidates</th>
+            </thead>
+
+            <tbody>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <script type="text/javascript">
+        $("#field_id").keypress(function(event) {
+            if (event.which == 13) {
+                event.preventDefault();
+                $("field_form").submit();
+            }
+        });
+    </script>
+
+    <script type="text/javascript">
+        var dataTable;
+
+        var alreadyLinked = false;
+
+        $(document).ready(function() {
+
+            dataTable = $('#fieldList').dataTable( {
+                "bProcessing": true,
+                "bStateSave": false,
+                "sAjaxSource": '/json/fieldlist',
+                "aoColumns" : [
+                    { "mData" : "field_id" },
+                    { "mData" : "num_rband" },
+                    { "mData" : "num_viewed" },
+                ],
+                "aoColumnDefs": [
+                    {
+                        "fnRender": function ( oObj ) {
+                            var num_viewed = parseInt(oObj.aData.num_viewed),
+                                num_total = parseInt(oObj.aData.num_total);
+                            s = num_viewed.toString() + " / " + num_total.toString();
+
+                            if (num_viewed == num_total) {
+                                s = "<font color='#bbb'>" + s;
+                                s = s + "</font>";
+                            }
+                            return s;
+                        },
+                        "aTargets": [ 2 ]
+                    }
+                ],
+                "bPaginate" : false,
+                "bSort" : true,
+
+                "fnDrawCallback": function () {
+
+                    if (alreadyLinked == false) {
+                        if ($("#fieldList tbody tr").length > 1) {
+                            console.log("derp");
+                            $("#fieldList tbody tr").click( function( e ) {
+                                var field = $(this).children()[0].innerHTML;
+                                var url = "/data/table/field/" + field;
+
+                                window.open(
+                                  url,
+                                  '_blank' // <- This is what makes it open in a new window.
+                                );
+
+                            });
+
+                            $("#fieldList tbody tr").mouseover( function(e) {
+                                $(this).attr("oldClass", $(this).attr("class"));
+                                $(this).attr("class", "mouseover");
+                                $(this).css("cursor", "pointer");
+                            });
+
+                            $("#fieldList tbody tr").mouseout( function(e) {
+                                $(this).attr("class", $(this).attr("oldClass"));
+                                $(this).css("cursor", "default");
+                            });
+
+                            alreadyLinked = true;
+                        }
+                    }
+                }
+            } );
+        } );
+    </script>
+
+{% endblock %}
