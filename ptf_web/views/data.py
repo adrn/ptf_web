@@ -50,12 +50,14 @@ def tagged(tag_name):
     if tag_name == "none":
         tag_name = []
 
-    print "IN HERE!!"
-
     # Default is to get Field ID, CCD ID, Source ID
     mongo_fields = request.args.get("fields", ["field_id", "ccd_id", "source_id", "indices", "ra", "dec", "microlensing_fit", "tags", "viewed"])
     sort = [("field_id",pymongo.ASCENDING), ("ccd_id",pymongo.ASCENDING), ("source_id",pymongo.ASCENDING)]
-    light_curves = light_curve_collection.find({"tags" : tag_name}, fields=mongo_fields, sort=sort)
+
+    light_curves = list(light_curve_collection.find({"tags" : tag_name}, fields=mongo_fields, sort=sort))
+
+    if len(light_curves) > 2000:
+        light_curves = list(light_curve_collection.find({"tags" : tag_name, "viewed" : { "$exists" : False }}, fields=mongo_fields, sort=sort, limit=2000))
 
     retrieved = []
     for lc in light_curves:
@@ -308,5 +310,15 @@ def previous_next_light_curve():
         else:
             next_idx = idx+1
 
-        return jsonify(previous=str_decode_field_ccd_source(table_state["state"][idx-1]),
-                       next=str_decode_field_ccd_source(table_state["state"][next_idx]))
+        try:
+            previous = str_decode_field_ccd_source(table_state["state"][idx-1])
+        except IndexError:
+            previous = None
+
+        try:
+            next = str_decode_field_ccd_source(table_state["state"][next_idx])
+        except IndexError:
+            next = None
+
+        return jsonify(previous=previous,
+                       next=next)

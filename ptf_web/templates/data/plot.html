@@ -38,11 +38,20 @@
         /* -------------------------------------------------- */
 
         function setNextPreviousLinks(data) {
-            var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]),
-                next_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.next[0], data.next[1], data.next[2]);
+            if (data.previous != null) {
+                var previous_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.previous[0], data.previous[1], data.previous[2]);
+                $("#previousLightCurve").attr("href", previous_url);
+            } else {
+                $("#previousLightCurve").attr("href", null);
+            }
 
-            $("#previousLightCurve").attr("href", previous_url);
-            $("#nextLightCurve").attr("href", next_url);
+            if (data.next != null) {
+                var next_url = "/candidates/plot?field_id={0}&ccd_id={1}&source_id={2}".format(data.next[0], data.next[1], data.next[2]);
+                $("#nextLightCurve").attr("href", next_url);
+            } else{
+                $("#nextLightCurve").attr("href", null);
+            }
+
         }
 
         function showPTFImage(thing) {
@@ -116,7 +125,6 @@
                 dataset = dataset[0];
             }
 
-            console.log(dataset);
             // Setup the graph
             if (graph == undefined) {
                 graph = $.graph('placeholder', dataset, options);
@@ -227,6 +235,7 @@
             });
             */
 
+            //$("#derp").keypress(function(event){
             $(document).keypress(function(event){
             	var keycode = (event.keyCode ? event.keyCode : event.which);
             	if(keycode == '110'){
@@ -241,6 +250,13 @@
                 	   $("input[value='qso']").prop('checked', false);
             	    } else {
                 	    $("input[value='qso']").prop('checked', true);
+            	    }
+            	    $("input[value='qso']").change();
+            	} else if (keycode == '116') {
+            	    if ($("input[value='transient']").is(':checked')) {
+                	   $("input[value='transient']").prop('checked', false);
+            	    } else {
+                	    $("input[value='transient']").prop('checked', true);
             	    }
             	    $("input[value='qso']").change();
             	} else if (keycode == '98') {
@@ -264,6 +280,12 @@
                 	    $("input[value='candidate']").prop('checked', true);
             	    }
             	    $("input[value='candidate']").change();
+            	} else if (keycode == '32') {
+            	    if ($("#nextLightCurve").prop("href") != "") {
+                	    window.location = $("#nextLightCurve").prop("href");
+            	    } else {
+                	    window.location = "/data";
+            	    }
             	}
             });
 
